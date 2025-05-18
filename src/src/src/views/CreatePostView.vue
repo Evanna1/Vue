@@ -62,31 +62,7 @@
     </div>
 
     <div class="button-group">
-      <button class="publish-btn" @click="showDialog = true">ai辅助</button>
       <button class="publish-btn" @click="publishPost">发布</button>
-    </div>
-
-    <!-- AI 问答弹窗 -->
-    <div v-if="showDialog" class="dialog-overlay" @click.self="showDialog = false">
-      <div class="dialog">
-        <span class="close-icon" @click.stop="showDialog = false">&times;</span>
-        <h2>🧠 AI 辅助创作</h2>
-
-        <label for="question">💬 请输入问题：</label><br />
-        <textarea v-model="question" id="question" placeholder="比如：请结合云南旅游写一篇博客"></textarea><br />
-
-        <button @click="askGemini" :disabled="loading">提交问题</button>
-
-        <h3>🤖 AI 的回答：</h3>
-        <div id="response" style="white-space: pre-wrap;">{{ response }}
-          <button class="copy-icon-btn" @click="copyResponse" title="复制">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-1 16H9v-12h9v12z"/>
-            </svg>
-          </button>
-        </div>
-
-      </div>
     </div>
   </div>
 </template>
@@ -110,56 +86,6 @@ const titleError = ref(false)
 const contentError = ref(false)
 
 const isPrivate = ref(false) // This existing ref will be used by the new toggle
-
-const showDialog = ref(false)
-const question = ref('')
-const response = ref('')
-const loading = ref(false)
-const token = localStorage.getItem('token') 
-
-async function askGemini() {
-  loading.value = true
-  response.value = '⏳ 正在请求 AI 回复，请稍候...'
-  try {
-    // 这里写调用后端接口逻辑，示范：
-    const res = await fetch('http://127.0.0.1:5000/article/aichat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' , 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ question: question.value })
-      
-    })
-    const data = await res.json()
-    response.value = data.answer || 'AI 未返回有效内容'
-  } catch (error) {
-    response.value = '请求出错：' + error.message
-  } finally {
-    loading.value = false
-  }
-}
-
-async function copyResponse() {
-    const responseText = document.getElementById('response').innerText;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(responseText)
-        .then(() => {
-          // 可选：提供复制成功的提示
-          alert('回答已复制到剪贴板！');
-        })
-        .catch(err => {
-          console.error('复制到剪贴板失败:', err);
-          alert('复制失败，请手动选择文本进行复制。');
-        });
-    } else {
-      // 如果浏览器不支持 navigator.clipboard，则提供备用方案（例如使用 textarea 选中并让用户手动复制）
-      const textArea = document.createElement('textarea');
-      textArea.value = responseText;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      alert('回答已复制到剪贴板！');
-    }
-  }
 
 const editorRef = shallowRef()
 const toolbarConfig = {}
@@ -361,8 +287,7 @@ label {
 
 .button-group {
   display: flex;
-  justify-content: center; 
-  gap: 50px; 
+  justify-content: center;
   margin-top: 30px;
 }
 
@@ -443,142 +368,5 @@ input:checked + .slider {
 }
 input:checked + .slider:before {
   transform: translateX(22px); /* (Switch width - knob width - 2*offset) = 50 - 20 - 2*4 = 22, or adjust as needed */
-}
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6); /* 更深的半透明背景 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px); /* 添加模糊效果 */
-}
-
-.dialog {
-  background-color: #f9f9f9; /* 更柔和的背景色 */
-  padding: 30px; /* 增加内边距 */
-  border-radius: 12px; /* 更圆润的边角 */
-  width: 600px;
-  max-width: 90%;
-  max-height: 85vh; /* 稍微增加最大高度 */
-  overflow-y: auto;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2); /* 更柔和的阴影 */
-  animation: fadeIn 0.3s ease-out; /* 添加淡入动画 */
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-h2 {
-  color: #333; /* 深灰色标题 */
-  margin-bottom: 20px;
-  text-align: center;
-  font-size: 24px;
-}
-
-label {
-  display: block;
-  margin-bottom: 8px;
-  color: #555;
-  font-weight: bold;
-}
-
-textarea {
-  width: calc(100% - 20px); /* 考虑内边距 */
-  height: 100px; /* 稍微增加高度 */
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 16px;
-  line-height: 1.5;
-  box-sizing: border-box; /* 确保 padding 和 border 不撑大元素 */
-}
-
-button {
-  padding: 12px 24px;
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-}
-
-button:disabled {
-  background-color: #ddd !important;
-  color: #888 !important;
-  cursor: not-allowed;
-}
-
-button:not(:disabled):hover {
-  opacity: 0.9;
-}
-
-.dialog > button:first-of-type { 
-  background-color: #5ea8da; 
-  color: white;
-  padding: 6px 12px;
-  margin: 15px auto 0 auto; 
-  display: block; 
-  font-size: 14px; 
-}
-h3 {
-  color: #333;
-  margin-top: 25px;
-  margin-bottom: 10px;
-  font-size: 18px;
-}
-
-#response {
-  background-color: #eee;
-  border-radius: 6px;
-  white-space: pre-wrap;
-  font-size: 16px;
-  line-height: 1.6;
-  overflow-y: auto;
-  max-height: 200px;
-  position: relative; /* 使其内部元素可以相对于它定位 */
-  padding: 15px;
-  padding-right: 40px; /* 为图标预留空间 */
-}
-
-.close-icon {
-  font-size: 24px;
-  font-weight: bold;
-  color: #888;
-  cursor: pointer;
-  transition: color 0.2s ease;
-  padding: 5px;
-  border-radius: 4px;
-  line-height: 1;
-  float: right;
-}
-
-.copy-icon-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px;
-  outline: none; /* 移除默认的焦点轮廓 */
-}
-
-.copy-icon-btn svg {
-  fill: #777;
-  width: 20px;
-  height: 20px;
-  transition: fill 0.2s ease;
-}
-
-.copy-icon-btn:hover svg {
-  fill: #333;
 }
 </style>
