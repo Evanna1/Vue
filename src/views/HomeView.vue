@@ -1,6 +1,7 @@
 <template>
   <div class="home-container">
-    <HeaderBar @search="handleSearch" :initialKeyword="keyword" /> <div class="tabs">
+    <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
+    <div class="tabs">
       <button :class="{ active: activeTab === 'recommend' }" @click="setActiveTab('recommend')">
         推荐
       </button>
@@ -14,7 +15,7 @@
     <div v-else-if="filteredPosts.length === 0 && keyword" class="no-results-message">
       没有找到与 "{{ keyword }}"相关的文章。
     </div>
-     <div v-else-if="filteredPosts.length === 0 && activeTab !== 'recommend'" class="no-results-message">
+    <div v-else-if="filteredPosts.length === 0 && activeTab !== 'recommend'" class="no-results-message">
       此分类下暂无文章。
     </div>
     <div class="post-list" v-else>
@@ -27,6 +28,7 @@
             {{ tag }}
           </span>
         </div>
+        <p v-if="activeTab === 'recommend' && post.score" class="recommend-score">推荐度：{{ post.score }}</p>
       </div>
     </div>
   </div>
@@ -34,187 +36,178 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router' // IMPORT useRoute and useRouter
+import { useRoute, useRouter } from 'vue-router'
 import HeaderBar from '@/components/HeaderBar.vue'
-import axios from 'axios' // Assuming you'll fetch posts
+import axios from 'axios'
 
-const route = useRoute() // INSTANTIATE useRoute
-const router = useRouter() // INSTANTIATE useRouter
+const route = useRoute()
+const router = useRouter()
 
 type TabType = 'recommend' | 'follow' | 'hot';
 const activeTab = ref<TabType>('recommend')
-const keyword = ref('') // This will hold the search term
-const isLoading = ref(false);
+const keyword = ref('')
+const isLoading = ref(false)
 
-// Define a Post interface matching your expected data structure
 interface User {
   id: number;
   username: string;
   avatar?: string;
 }
+
+interface RecommendationItem {
+  article_id: number;
+  title: string;
+  score: number;
+}
+
 interface Post {
   id: number;
   userId: number;
   title: string;
   content: string;
-  tags?: string[]; // Expect tags as an array of strings
-  user?: User; // Include if author info is nested
-  authorName?: string; // Fallback if user object is not directly available
-  createdAt: string; // Or whatever your date field is
+  tags?: string[];
+  user?: User;
+  authorName?: string;
+  createdAt: string;
   views?: number;
   likes?: number;
+  score?: number; // 用于存储推荐度分数
 }
 
-const allPosts = ref<Post[]>([]) // Store all fetched posts
+const allPosts = ref<Post[]>([])
 
-// --- Fetching Posts ---
 const fetchPosts = async () => {
-  isLoading.value = true;
-  console.log(`Workspaceing posts for tab: ${activeTab.value}, keyword: ${keyword.value}`);
+  isLoading.value = true
+  console.log(`Fetching posts for tab: ${activeTab.value}, keyword: ${keyword.value}`)
   try {
-    let url = 'http://127.0.0.1:5000/article/recommend'; // Default to recommend
+    let url = '';
+    const headers: any = {};
     const params: any = {};
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
 
-    // Tab-specific endpoints (adjust as needed)
-    if (activeTab.value === 'follow') {
-      url = 'http://127.0.0.1:5000/article/following'; // Needs authentication
+    if (activeTab.value === 'recommend') {
+      url = 'http://127.0.0.1:5000/article/recommend';
+      if (keyword.value) {
+        params.keyword = keyword.value;
+      }
+    } else if (activeTab.value === 'follow') {
+      url = 'http://127.0.0.1:5000/following'; // 修正关注接口地址
     } else if (activeTab.value === 'hot') {
       url = 'http://127.0.0.1:5000/article/hot';
-    }
-    // If there's a search keyword, we might use a general search endpoint
-    // or let the frontend filter if the backend doesn't support search on these specific tabs.
-    // For simplicity here, we'll assume frontend filtering for keywords unless it's a dedicated search.
-    // If keyword is present, it might override tab or use a specific search API.
-    // This example will fetch by tab, then filter by keyword on frontend.
-
-    const token = localStorage.getItem('token');
-    const headers: any = {};
-    if (token && activeTab.value === 'follow') { // Only send token if needed, e.g., for 'follow' tab
-        headers.Authorization = `Bearer ${token}`;
+    } else if (keyword.value) {
+      url = 'http://127.0.0.1:5000/article/search';
+      params.keyword = keyword.value;
     }
 
-    // If you have a dedicated search API endpoint:
-    if (keyword.value) {
-        url = `http://127.0.0.1:5000/article/search`;
-        params.keyword = keyword.value;
-        // If search API also needs tab context, add it to params
-        // params.tab = activeTab.value;
-    }
-
-
-    const response = await axios.get(url, { headers, params });
-    if (response.data && Array.isArray(response.data.data)) {
-      allPosts.value = response.data.data.map((post: any) => ({
-        ...post,
-        tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
-      }));
-    } else if (Array.isArray(response.data)) { // If API returns array directly
-        allPosts.value = response.data.map((post: any) => ({
-        ...post,
-        tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
-      }));
-    }
-    else {
+    if (url) {
+      const response = await axios.get(url, { headers, params });
+      if (response.data && response.data.state === 1) {
+        if (activeTab.value === 'recommend' && Array.isArray(response.data.recommendations)) {
+          // 处理推荐接口返回的数据，并直接包含文章详细信息
+          allPosts.value = response.data.recommendations.map((item: any) => ({
+            id: item.article_id,
+            userId: item.userId,
+            title: item.title,
+            content: item.content,
+            tags: item.tags || [],
+            user: item.user,
+            authorName: item.authorName,
+            createdAt: item.createdAt,
+            views: item.views,
+            likes: item.likes,
+            score: item.score,
+          } as Post));
+        } else if (Array.isArray(response.data.data)) {
+          allPosts.value = response.data.data.map((post: any) => ({
+            ...post,
+            tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
+          }));
+        } else if (Array.isArray(response.data)) {
+          allPosts.value = response.data.map((post: any) => ({
+            ...post,
+            tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
+          }));
+        } else {
+          allPosts.value = [];
+          console.warn("No posts data found or in unexpected format", response.data);
+        }
+      } else {
+        allPosts.value = [];
+        console.warn("Fetch posts failed", response.data);
+      }
+    } else {
       allPosts.value = [];
-      console.warn("No posts data found or in unexpected format", response.data);
     }
   } catch (error) {
     console.error('Error fetching posts:', error)
     allPosts.value = [];
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 
-
-// According to keyword filter articles
 const filteredPosts = computed(() => {
-  let listToFilter = [...allPosts.value];
+  let listToFilter = [...allPosts.value]
 
   if (!keyword.value) {
-    return listToFilter;
+    return listToFilter
   }
 
-  const searchTerm = keyword.value.toLowerCase();
+  const searchTerm = keyword.value.toLowerCase()
   return listToFilter.filter(post =>
     (post.title && post.title.toLowerCase().includes(searchTerm)) ||
     (post.content && post.content.toLowerCase().includes(searchTerm)) ||
     (post.user?.username && post.user.username.toLowerCase().includes(searchTerm)) ||
     (post.authorName && post.authorName.toLowerCase().includes(searchTerm)) ||
     (post.tags && post.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
-  );
-});
+  )
+})
 
-// Update keyword from HeaderBar search
 const handleSearch = (newKeyword: string) => {
-  // When search is initiated from HeaderBar, update URL query and keyword
-  router.push({ query: newKeyword ? { search: newKeyword } : {} });
-  // The watchEffect below will handle setting keyword.value from route.query
-};
+  router.push({ query: newKeyword ? { search: newKeyword } : {} })
+}
 
-// Watch for route query changes to update the keyword
 watch(() => route.query.search, (newSearchTerm) => {
-  const term = Array.isArray(newSearchTerm) ? newSearchTerm[0] : newSearchTerm;
-  keyword.value = term || '';
-  // No need to call fetchPosts() here if search is purely frontend
-  // If your backend handles search, then you might call fetchPosts()
-  if (term) { // If there's a search term, fetch with it
-    fetchPosts();
-  } else if (!term && allPosts.value.length === 0) { // If search cleared and no posts, fetch by tab
-    fetchPosts();
-  }
-  // If search is cleared but posts for the tab were already loaded, no need to re-fetch,
-  // the computed `filteredPosts` will just return all posts for the current tab.
+  const term = Array.isArray(newSearchTerm) ? newSearchTerm[0] : newSearchTerm
+  keyword.value = term || ''
+  fetchPosts() // 搜索时重新获取数据
+}, { immediate: true })
 
-}, { immediate: true }); // immediate: true to run on component mount
-
-
-// Watch for activeTab changes to re-fetch posts
 watch(activeTab, () => {
-    // When tab changes, clear keyword unless you want persistent search across tabs
-    // For this example, let's clear the search term and URL when tab changes
-    if (keyword.value) {
-        keyword.value = ''; // Clear local keyword
-        router.push({ query: {} }); // Clear search query from URL
-    }
-    fetchPosts();
-});
-
+  if (keyword.value && activeTab.value !== 'recommend') {
+    keyword.value = '';
+    router.push({ query: {} });
+  }
+  fetchPosts()
+})
 
 onMounted(() => {
-  // Initial fetch based on current route query or default tab
-  // The 'watch' on route.query.search with immediate: true handles initial keyword
-  // If no search query, fetch posts for the default active tab
-  if (!route.query.search) {
-    fetchPosts();
-  }
-});
+  fetchPosts() // 初始加载数据
+})
 
 function setActiveTab(tab: TabType) {
-  activeTab.value = tab;
-  // Fetching is handled by the watcher on activeTab
+  activeTab.value = tab
 }
 
 function goToPost(id: number | string) {
-  router.push(`/post/${id}`);
+  router.push(`/post/${id}`)
 }
 
-// Function to generate excerpt (similar to Profile.vue but can be moved to a utility file)
 function getExcerpt(content: string, length: number = 100): string {
-  if (!content) return '暂无内容预览...';
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = content; // Handle HTML content
-  const text = tempDiv.textContent || tempDiv.innerText || '';
-  return text.length > length ? text.slice(0, length) + '...' : text;
+  if (!content) return '暂无内容预览...'
+  const tempDiv = document.createElement('div')
+  tempDiv.innerHTML = content
+  const text = tempDiv.textContent || tempDiv.innerText || ''
+  return text.length > length ? text.slice(0, length) + '...' : text
 }
 
-// For clicking tags within the Home page itself
 function searchByTag(tag: string) {
-  if (!tag) return;
-  // This will update the route, and the watcher on route.query.search will do the rest
-  router.push({ query: { search: tag } });
+  if (!tag) return
+  router.push({ query: { search: tag } })
 }
-
 </script>
 
 <style scoped>
