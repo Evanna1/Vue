@@ -70,6 +70,7 @@ function goLogin() {
 function logout() {
   localStorage.removeItem('token')
   localStorage.removeItem('avatar')
+  localStorage.removeItem('user_id')
   isLoggedIn.value = false
   router.push('/')
 }

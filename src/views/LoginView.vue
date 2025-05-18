@@ -124,6 +124,7 @@ async function handleLogin() {
       if (result.state === 1) {
         localStorage.setItem('token', result.token)
         localStorage.setItem('avatar', result.avatar || '/img/default-avatar.png')
+        localStorage.setItem('user_id', result.id)
         router.push('/')
       } else {
         alert(result.message)
@@ -152,6 +153,7 @@ async function handleLogin() {
       if (result.state === 1) {
         localStorage.setItem('token', result.token)
         localStorage.setItem('avatar', result.avatar || '/img/default-avatar.png')
+        localStorage.setItem('user_id', result.id)
         router.push('/')
       } else {
         alert(result.message)
