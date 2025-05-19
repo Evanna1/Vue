@@ -1,6 +1,15 @@
 <template>
   <div class="home-container">
     <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
+    <div class="search-bar">
+      <input
+        type="text"
+        v-model="searchKeyword"
+        placeholder="搜索文章标题、内容、作者或标签"
+        @keyup.enter="handleSearch(searchKeyword)"
+      />
+      <button @click="handleSearch(searchKeyword)">搜索</button>
+    </div>
     <div class="tabs">
       <button :class="{ active: activeTab === 'recommend' }" @click="setActiveTab('recommend')">
         推荐
@@ -15,7 +24,7 @@
     <div v-else-if="filteredPosts.length === 0 && keyword" class="no-results-message">
       没有找到与 "{{ keyword }}"相关的文章。
     </div>
-    <div v-else-if="filteredPosts.length === 0 && activeTab !== 'recommend'" class="no-results-message">
+    <div v-else-if="filteredPosts.length === 0 && activeTab !== 'recommend' && !keyword" class="no-results-message">
       此分类下暂无文章。
     </div>
     <div class="post-list" v-else>
@@ -29,24 +38,26 @@
           </span>
         </div>
         <p v-if="activeTab === 'recommend' && post.score" class="recommend-score">推荐度：{{ post.score }}</p>
+        <p v-if="activeTab === 'hot' && post.hot_score" class="hot-score">热度：{{ post.hot_score }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import HeaderBar from '@/components/HeaderBar.vue'
-import axios from 'axios'
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import HeaderBar from '@/components/HeaderBar.vue';
+import axios from 'axios';
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
 type TabType = 'recommend' | 'follow' | 'hot';
-const activeTab = ref<TabType>('recommend')
-const keyword = ref('')
-const isLoading = ref(false)
+const activeTab = ref<TabType>('recommend');
+const keyword = ref('');
+const searchKeyword = ref(''); // 用于搜索输入框的双向绑定
+const isLoading = ref(false);
 
 interface User {
   id: number;
@@ -54,14 +65,8 @@ interface User {
   avatar?: string;
 }
 
-interface RecommendationItem {
-  article_id: number;
-  title: string;
-  score: number;
-}
-
 interface Post {
-  id: number;
+  id: number | string; // 确保 id 可以是 number 或 string，以适应不同接口
   userId: number;
   title: string;
   content: string;
@@ -72,13 +77,14 @@ interface Post {
   views?: number;
   likes?: number;
   score?: number; // 用于存储推荐度分数
+  hot_score?: number; // 用于存储热度分数
 }
 
-const allPosts = ref<Post[]>([])
+const allPosts = ref<Post[]>([]);
 
 const fetchPosts = async () => {
-  isLoading.value = true
-  console.log(`Fetching posts for tab: ${activeTab.value}, keyword: ${keyword.value}`)
+  isLoading.value = true;
+  console.log(`Fetching posts for tab: ${activeTab.value}, keyword: ${keyword.value}`);
   try {
     let url = '';
     const headers: any = {};
@@ -94,19 +100,24 @@ const fetchPosts = async () => {
         params.keyword = keyword.value;
       }
     } else if (activeTab.value === 'follow') {
-      url = 'http://127.0.0.1:5000/following'; // 修正关注接口地址
+      url = 'http://127.0.0.1:5000/following';
     } else if (activeTab.value === 'hot') {
       url = 'http://127.0.0.1:5000/article/hot';
     } else if (keyword.value) {
       url = 'http://127.0.0.1:5000/article/search';
-      params.keyword = keyword.value;
+      params.search = keyword.value;
+    } else if (!keyword.value && activeTab.value !== 'recommend') {
+      allPosts.value = [];
+      isLoading.value = false;
+      return;
+    } else {
+      url = 'http://127.0.0.1:5000/article/recommend'; // 默认加载推荐
     }
 
     if (url) {
       const response = await axios.get(url, { headers, params });
       if (response.data && response.data.state === 1) {
         if (activeTab.value === 'recommend' && Array.isArray(response.data.recommendations)) {
-          // 处理推荐接口返回的数据，并直接包含文章详细信息
           allPosts.value = response.data.recommendations.map((item: any) => ({
             id: item.article_id,
             userId: item.userId,
@@ -118,104 +129,159 @@ const fetchPosts = async () => {
             createdAt: item.createdAt,
             views: item.views,
             likes: item.likes,
-            score: item.score,
+            //score: item.score,
           } as Post));
-        } else if (Array.isArray(response.data.data)) {
-          allPosts.value = response.data.data.map((post: any) => ({
-            ...post,
-            tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
-          }));
-        } else if (Array.isArray(response.data)) {
-          allPosts.value = response.data.map((post: any) => ({
-            ...post,
-            tags: post.tag ? post.tag.split(/,|，/).map((t: string) => t.trim()).filter((t:string) => t) : []
-          }));
+        } else if (activeTab.value === 'hot' && Array.isArray(response.data.articles)) {
+          allPosts.value = response.data.articles.map((post: any) => ({
+            id: post.id,
+            userId: post.userId,
+            title: post.title,
+            content: post.content,
+            tags: post.tags || [],
+            user: post.user,
+            authorName: post.authorName,
+            createdAt: post.createdAt,
+            views: post.views,
+            likes: post.likes,
+            //hot_score: post.hot_score,
+          } as Post));
         } else {
-          allPosts.value = [];
           console.warn("No posts data found or in unexpected format", response.data);
         }
       } else {
-        allPosts.value = [];
         console.warn("Fetch posts failed", response.data);
       }
     } else {
       allPosts.value = [];
     }
   } catch (error) {
-    console.error('Error fetching posts:', error)
+    console.error('Error fetching posts:', error);
     allPosts.value = [];
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 const filteredPosts = computed(() => {
-  let listToFilter = [...allPosts.value]
+  let listToFilter = [...allPosts.value];
 
   if (!keyword.value) {
-    return listToFilter
+    return listToFilter;
   }
 
-  const searchTerm = keyword.value.toLowerCase()
+  const searchTerm = keyword.value.toLowerCase();
   return listToFilter.filter(post =>
     (post.title && post.title.toLowerCase().includes(searchTerm)) ||
     (post.content && post.content.toLowerCase().includes(searchTerm)) ||
     (post.user?.username && post.user.username.toLowerCase().includes(searchTerm)) ||
     (post.authorName && post.authorName.toLowerCase().includes(searchTerm)) ||
     (post.tags && post.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
-  )
-})
+  );
+});
 
 const handleSearch = (newKeyword: string) => {
-  router.push({ query: newKeyword ? { search: newKeyword } : {} })
-}
+  keyword.value = newKeyword;
+  router.push({ query: newKeyword ? { search: newKeyword } : {} });
+};
 
 watch(() => route.query.search, (newSearchTerm) => {
-  const term = Array.isArray(newSearchTerm) ? newSearchTerm[0] : newSearchTerm
-  keyword.value = term || ''
-  fetchPosts() // 搜索时重新获取数据
-}, { immediate: true })
+  const term = Array.isArray(newSearchTerm) ? newSearchTerm[0] : newSearchTerm;
+  keyword.value = term || '';
+}, { immediate: true });
 
 watch(activeTab, () => {
-  if (keyword.value && activeTab.value !== 'recommend') {
-    keyword.value = '';
-    router.push({ query: {} });
-  }
-  fetchPosts()
-})
+  searchKeyword.value = ''; // 切换 Tab 时清空搜索框
+  keyword.value = ''; // 切换 Tab 时清空搜索关键词
+  router.push({ query: {} });
+  fetchPosts();
+});
+
+watch(keyword, () => {
+  fetchPosts();
+});
 
 onMounted(() => {
-  fetchPosts() // 初始加载数据
-})
+  fetchPosts();
+});
 
 function setActiveTab(tab: TabType) {
-  activeTab.value = tab
+  activeTab.value = tab;
 }
 
 function goToPost(id: number | string) {
-  router.push(`/post/${id}`)
+  router.push(`/post/${id}`);
 }
 
 function getExcerpt(content: string, length: number = 100): string {
-  if (!content) return '暂无内容预览...'
-  const tempDiv = document.createElement('div')
-  tempDiv.innerHTML = content
-  const text = tempDiv.textContent || tempDiv.innerText || ''
-  return text.length > length ? text.slice(0, length) + '...' : text
+  if (!content) return '暂无内容预览...';
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = content;
+  const text = tempDiv.textContent || tempDiv.innerText || '';
+  return text.length > length ? text.slice(0, length) + '...' : text;
 }
 
 function searchByTag(tag: string) {
-  if (!tag) return
-  router.push({ query: { search: tag } })
+  if (!tag) return;
+  searchKeyword.value = tag;
+  handleSearch(tag);
 }
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .home-container {
   padding: 0;
   background: #f9f9f9;
   min-height: 100vh;
   padding-top: 60px; /* Adjust if HeaderBar has a fixed height */
+}
+
+.search-bar {
+  display: flex;
+  justify-content: center;
+  padding: 15px 20px;
+  background-color: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+.search-bar input[type="text"] {
+  flex-grow: 1;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 25px 0 0 25px;
+  font-size: 16px;
+  outline: none;
+}
+
+.search-bar button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 0 25px 25px 0;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+
+.search-bar button:hover {
+  background-color: #0056b3;
+}
+
+/* 响应式调整搜索栏 */
+@media (max-width: 600px) {
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-bar input[type="text"] {
+    border-radius: 25px;
+    margin-bottom: 10px;
+  }
+  .search-bar button {
+    border-radius: 25px;
+  }
 }
 
 .tabs {
@@ -268,7 +334,6 @@ function searchByTag(tag: string) {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
 
-
 .post-card h3 {
   margin: 0 0 8px 0; /* Add bottom margin */
   font-size: 22px; /* Larger title */
@@ -308,11 +373,18 @@ function searchByTag(tag: string) {
   border-radius: 15px; /* More rounded tags */
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2sease;
 }
 .tag-item:hover {
   background-color: #007bff;
   color: white;
+}
+
+.recommend-score,
+.hot-score {
+  font-size: 14px;
+  color: #007bff;
+  margin-top: 8px;
 }
 
 /* Responsive adjustments */
