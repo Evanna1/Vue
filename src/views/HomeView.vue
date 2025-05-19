@@ -17,7 +17,9 @@
       <button :class="{ active: activeTab === 'follow' }" @click="setActiveTab('follow')">
         关注
       </button>
-      <button :class="{ active: activeTab === 'hot' }" @click="setActiveTab('hot')">热榜</button>
+      <button :class="{ active: activeTab === 'hot' }" @click="setActiveTab('hot')">
+        热榜
+      </button>
     </div>
 
     <div v-if="isLoading" class="loading-message">正在加载文章...</div>
@@ -100,18 +102,16 @@ const fetchPosts = async () => {
         params.keyword = keyword.value;
       }
     } else if (activeTab.value === 'follow') {
-      url = 'http://127.0.0.1:5000/following';
+      url = 'http://127.0.0.1:5000/following/articles';
     } else if (activeTab.value === 'hot') {
       url = 'http://127.0.0.1:5000/article/hot';
     } else if (keyword.value) {
       url = 'http://127.0.0.1:5000/article/search';
       params.search = keyword.value;
-    } else if (!keyword.value && activeTab.value !== 'recommend') {
+    } else {
       allPosts.value = [];
       isLoading.value = false;
       return;
-    } else {
-      url = 'http://127.0.0.1:5000/article/recommend'; // 默认加载推荐
     }
 
     if (url) {
@@ -131,6 +131,19 @@ const fetchPosts = async () => {
             likes: item.likes,
             //score: item.score,
           } as Post));
+        } else if (activeTab.value === 'follow' && Array.isArray(response.data.articles)) {
+          allPosts.value = response.data.articles.map((post: any) => ({
+            id: post.id,
+            userId: post.user_id,
+            title: post.title,
+            content: post.content,
+            tags: post.tag ? post.tag.split(',') : [],
+            user: { id: post.user_id, username: post.author },
+            authorName: post.author,
+            createdAt: post.create_time,
+            views: post.read_count,
+            likes: post.like_count,
+          } as Post));
         } else if (activeTab.value === 'hot' && Array.isArray(response.data.articles)) {
           allPosts.value = response.data.articles.map((post: any) => ({
             id: post.id,
@@ -140,9 +153,9 @@ const fetchPosts = async () => {
             tags: post.tags || [],
             user: post.user,
             authorName: post.authorName,
-            createdAt: post.createdAt,
-            views: post.views,
-            likes: post.likes,
+            createdAt: post.create_time,
+            views: post.read_count,
+            likes: post.like_count,
             //hot_score: post.hot_score,
           } as Post));
         } else {
@@ -190,8 +203,8 @@ watch(() => route.query.search, (newSearchTerm) => {
 }, { immediate: true });
 
 watch(activeTab, () => {
-  searchKeyword.value = ''; // 切换 Tab 时清空搜索框
-  keyword.value = ''; // 切换 Tab 时清空搜索关键词
+  searchKeyword.value = '';
+  keyword.value = '';
   router.push({ query: {} });
   fetchPosts();
 });
@@ -228,21 +241,28 @@ function searchByTag(tag: string) {
 </script>
 
 <style scoped>
-/* 样式保持不变 */
+/* 美化后的样式 */
 .home-container {
   padding: 0;
   background: #f9f9f9;
   min-height: 100vh;
-  padding-top: 60px; /* Adjust if HeaderBar has a fixed height */
+  padding-top: 60px; /* 确保内容不被固定的 HeaderBar 遮挡 */
+  font-family: Arial, sans-serif;
 }
 
 .search-bar {
   display: flex;
   justify-content: center;
-  padding: 15px 20px;
+  padding: 15px 20px; /* 恢复一些上下 padding */
   background-color: #fff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   margin-bottom: 20px;
+  border-radius: 25px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  /* 添加上外边距，使其往下移 */
+  margin-top: 30px;
 }
 
 .search-bar input[type="text"] {
@@ -252,6 +272,12 @@ function searchByTag(tag: string) {
   border-radius: 25px 0 0 25px;
   font-size: 16px;
   outline: none;
+  transition: border-color 0.3s;
+  max-width: 800px;
+}
+
+.search-bar input[type="text"]:focus {
+  border-color: #007bff;
 }
 
 .search-bar button {
@@ -269,45 +295,27 @@ function searchByTag(tag: string) {
   background-color: #0056b3;
 }
 
-/* 响应式调整搜索栏 */
-@media (max-width: 600px) {
-  .search-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .search-bar input[type="text"] {
-    border-radius: 25px;
-    margin-bottom: 10px;
-  }
-  .search-bar button {
-    border-radius: 25px;
-  }
-}
-
 .tabs {
   display: flex;
   justify-content: center;
   margin: 20px 0;
-  padding: 0 10px; /* Add some padding for smaller screens */
-  flex-wrap: wrap; /* Allow tabs to wrap on small screens */
+  padding: 0 10px;
+  flex-wrap: wrap;
 }
 
 .tabs button {
-  padding: 10px 20px; /* Increased padding */
-  margin: 5px; /* Adjusted margin for wrapping */
-  background: #e9ecef; /* Lighter background */
+  padding: 10px 20px;
+  margin: 5px;
+  background: #e9ecef;
   border: none;
   cursor: pointer;
-  border-radius: 20px; /* Pill shape */
-  font-size: 16px; /* Slightly larger font */
+  border-radius: 20px;
+  font-size: 16px;
   color: #495057;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.tabs button:hover {
-  background: #ced4da;
-}
-
+.tabs button:hover,
 .tabs button.active {
   background: #007bff;
   color: white;
@@ -317,48 +325,46 @@ function searchByTag(tag: string) {
 .post-list {
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 16px 20px; /* Add bottom padding */
+  padding: 0 16px 20px;
 }
 
 .post-card {
   background: white;
-  padding: 20px; /* Increased padding */
-  border-radius: 12px; /* More rounded corners */
-  margin-bottom: 20px; /* Increased margin */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow */
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.3s;
 }
+
 .post-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  border-color: #007bff;
 }
 
 .post-card h3 {
-  margin: 0 0 8px 0; /* Add bottom margin */
-  font-size: 22px; /* Larger title */
+  margin: 0 0 8px 0;
+  font-size: 22px;
   color: #343a40;
 }
 
 .post-card .author {
-  color: #6c757d; /* Softer author text color */
+  color: #6c757d;
   font-size: 14px;
-  margin: 0 0 12px 0; /* Add bottom margin */
+  margin: 0 0 12px 0;
 }
 
 .post-card .content {
   font-size: 16px;
   color: #495057;
-  line-height: 1.7; /* Improved readability */
+  line-height: 1.7;
   margin-bottom: 15px;
 }
 
-.loading-message, .no-results-message {
-  text-align: center;
-  padding: 40px 20px;
-  font-size: 18px;
-  color: #6c757d;
-}
 .post-tags {
   display: flex;
   flex-wrap: wrap;
@@ -370,11 +376,12 @@ function searchByTag(tag: string) {
   background-color: #f0f0f0;
   color: #555;
   padding: 4px 10px;
-  border-radius: 15px; /* More rounded tags */
+  border-radius: 15px;
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2sease;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
+
 .tag-item:hover {
   background-color: #007bff;
   color: white;
@@ -387,7 +394,14 @@ function searchByTag(tag: string) {
   margin-top: 8px;
 }
 
-/* Responsive adjustments */
+.loading-message,
+.no-results-message {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 18px;
+  color: #6c757d;
+}
+
 @media (max-width: 768px) {
   .tabs button {
     padding: 8px 15px;

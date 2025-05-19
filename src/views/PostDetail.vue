@@ -10,6 +10,11 @@
         <span v-if="post.update_time">更新时间: {{ formatDate(post.update_time) }}</span>
         <span v-if="post.read_count !== undefined && post.read_count !== null">阅读量: {{ post.read_count }}</span>
       </div>
+      <div class="post-tags" v-if="articleTags.length > 0">
+        <span class="tag-item" v-for="(tag, index) in articleTags" :key="index">
+          {{ tag }}
+        </span>
+      </div>
     </div>
 
     <div class="card content-card">
@@ -45,14 +50,14 @@
             <div v-else-if="likers.length === 0" class="empty-list">暂无用户点赞此文章。</div>
             <div v-else class="user-list">
                 <div v-for="(user, index) in likers" :key="index" class="user-list-item">
-                    <img :src="user.avatar || 'default_avatar.png'" alt="Avatar" class="user-avatar">
+                    <img :src="user.avatar || '/default_avatar.png'" alt="Avatar" class="user-avatar">
                     <span>{{ user.nickname }}</span>
                      </div>
             </div>
         </div>
     </div>
 
-     <div v-if="showFavoritersModal" class="modal-overlay" @click.self="showFavoritersModal = false">
+    <div v-if="showFavoritersModal" class="modal-overlay" @click.self="showFavoritersModal = false">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>收藏用户列表</h3>
@@ -62,9 +67,9 @@
             <div v-else-if="favoriters.length === 0" class="empty-list">暂无用户收藏此文章。</div>
             <div v-else class="user-list">
                 <div v-for="(user, index) in favoriters" :key="index" class="user-list-item">
-                     <img :src="user.avatar || 'default_avatar.png'" alt="Avatar" class="user-avatar">
-                    <span>{{ user.nickname }}</span>
-                    </div>
+                     <img :src="user.avatar || '/default_avatar.png'" alt="Avatar" class="user-avatar">
+                     <span>{{ user.nickname }}</span>
+                     </div>
             </div>
         </div>
     </div>
@@ -154,14 +159,12 @@
         <span>第 {{ pagination.current_page }} / {{ pagination.total_pages }} 页</span>
         <button @click="goToPage(pagination.current_page + 1)" :disabled="pagination.current_page === pagination.total_pages">下一页</button>
       </div>
-
     </div>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, nextTick, computed } from 'vue'; // Import computed
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import { format } from 'date-fns';
@@ -179,8 +182,7 @@ interface Article {
   read_count: number;
   like_count: number; // 文章喜欢数
   favorite_count: number; // 文章收藏数
-  // is_liked_by_current_user?: boolean; // Removed, will check via separate call
-  // is_favorited_by_current_user?: boolean; // Removed, will check via separate call
+  tag: string | null; // 新增：文章标签字段
 }
 
 const post = ref<Article>({
@@ -194,8 +196,7 @@ const post = ref<Article>({
   read_count: 0,
   like_count: 0,
   favorite_count: 0,
-  // is_liked_by_current_user: false, // No longer initialized from article data
-  // is_favorited_by_current_user: false, // No longer initialized from article data
+  tag: null, // 新增：初始化标签字段
 });
 
 // 单独的状态变量，用于控制按钮的选中/未选中样式
@@ -281,12 +282,21 @@ const goToAuthorProfile = (authorId: number | null) => {
     // 假设作者主页路由是 /user/:id
     // 如果作者是当前用户，可以考虑跳转到自己的主页路由，或者不做区分
     if (authorId === currentUserId.value) {
-         router.push({ name: 'MyProfile' });
+         router.push({ name: 'MyProfile' }); // Assuming you have a named route for current user profile
     } else {
-         router.push({ name: 'OtherUserProfile', params: { userId: authorId } });
+         router.push({ name: 'OtherUserProfile', params: { userId: authorId } }); // Assuming a named route for other user profiles
     }
 
 };
+
+// 计算属性：分割文章标签字符串
+const articleTags = computed(() => {
+  if (!post.value.tag) {
+    return [];
+  }
+  // 使用中文逗号分割标签
+  return post.value.tag.split('，').map(tag => tag.trim()).filter(tag => tag.length > 0);
+});
 
 
 // 辅助函数：格式化日期字符串
@@ -308,19 +318,19 @@ const getParentAuthorUsername = (parent_id: number | null): string => {
   // Find the parent comment first in top-level comments
   const parentComment = comments.value.find(c => c.id === parent_id);
   if (parentComment) {
-     // Assuming comment.user?.username or nickname exists
-     return parentComment.user?.username || parentComment.user?.nickname || 'Deleted User';
+      // Assuming comment.user?.username or nickname exists
+      return parentComment.user?.username || parentComment.user?.nickname || 'Deleted User';
   }
 
   // If not found in top-level comments, check replies of top-level comments
   for (const comment of comments.value) {
-      if (comment.replies) {
-          const parentReply = comment.replies.find(r => r.id === parent_id);
-          if (parentReply) {
+       if (comment.replies) {
+           const parentReply = comment.replies.find(r => r.id === parent_id);
+           if (parentReply) {
                // Assuming reply.user?.username or nickname exists
                return parentReply.user?.username || parentReply.user?.nickname || 'Deleted User';
-          }
-      }
+           }
+       }
   }
 
   return '未知用户';
@@ -334,8 +344,8 @@ const fetchArticleDetails = async (articleId: string) => {
         const token = localStorage.getItem('token'); // Get token (still useful for potentially protected articles or getting author_id if needed)
         const response = await axios.get(`http://127.0.0.1:5000/user/article_content/${articleId}`, {
           headers: {
-             // Include token even if optional for the endpoint itself, might be needed for author_id
-             ...(token && { Authorization: `Bearer ${token}` }),
+              // Include token even if optional for the endpoint itself, might be needed for author_id
+              ...(token && { Authorization: `Bearer ${token}` }),
           },
         });
 
@@ -343,21 +353,22 @@ const fetchArticleDetails = async (articleId: string) => {
 
         if (response.data.state === 1 && response.data.article) {
              // Assign fetched data to post.value
-             // Assume backend provides article ID and author user ID
+             // Assume backend provides article ID, author user ID, and tag
              post.value = {
                ...post.value, // Keep defaults if needed
                ...response.data.article, // Overwrite with fetched data
-               // We need to ensure response.data.article includes user_id here
+               // We need to ensure response.data.article includes user_id and tag here
                user_id: response.data.article.user_id !== undefined ? response.data.article.user_id : null, // Ensure user_id is assigned
+               tag: response.data.article.tag !== undefined ? response.data.article.tag : null, // Ensure tag is assigned
              };
 
-            // Do NOT set isLiked or isFavorited here
+           // Do NOT set isLiked or isFavorited here
 
         } else {
-              console.error('Error fetching post details: Invalid response state', response.data);
-              alert("加载文章失败：" + (response.data.message || "未知错误"));
-              // If article fails to load, redirect
-              router.push('/');
+             console.error('Error fetching post details: Invalid response state', response.data);
+             alert("加载文章失败：" + (response.data.message || "未知错误"));
+             // If article fails to load, redirect
+             router.push('/');
         }
 
       } catch (error) {
@@ -386,7 +397,7 @@ const checkArticleLikedStatus = async (articleId: number) => {
     }
 
     try {
-        // Assuming a backend endpoint like GET /article/check_liked/<article_id>
+        // Assuming a backend endpoint like GET /alike/check_liked/<article_id>
         const response = await axios.get(`http://127.0.0.1:5000/alike/check_liked/${articleId}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
@@ -414,7 +425,7 @@ const checkArticleLikedStatus = async (articleId: number) => {
 
 // --- New: Check if current user favorited the article ---
 const checkArticleFavoritedStatus = async (articleId: number) => {
-     const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');
     if (!token) {
         isFavorited.value = false; // Not logged in, so not favorited
         return;
@@ -427,23 +438,23 @@ const checkArticleFavoritedStatus = async (articleId: number) => {
                 Authorization: `Bearer ${token}`,
             },
         });
-         console.log("Check Favorited Response:", response.data);
-         if (response.data.state === 1) {
+          console.log("Check Favorited Response:", response.data);
+          if (response.data.state === 1) {
              isFavorited.value = response.data.is_favorited || false; // Assuming response has is_favorited boolean
-         } else {
+          } else {
              console.error('Error checking favorite status:', response.data.message);
              isFavorited.value = false; // Assume not favorited on error
-         }
+          }
     } catch (error) {
-         console.error('Error checking favorite status:', error);
-         if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
+          console.error('Error checking favorite status:', error);
+          if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
              console.log("User token invalid for favorite check.");
              // No need to alert or redirect here, just treat as not logged in/not favorited
              isFavorited.value = false;
-        } else {
+         } else {
              console.error('Failed to check favorite status:', error);
              isFavorited.value = false; // Assume not favorited on other errors
-        }
+         }
     }
 };
 
@@ -459,7 +470,7 @@ const fetchComments = async (page: number = 1) => {
         const token = localStorage.getItem('token'); // 获取 token
         const response = await axios.get(`http://127.0.0.1:5000/article/${articleId}/comments`, {
             headers: {
-                  ...(token && { Authorization: `Bearer ${token}` }), // Only add token if exists
+                   ...(token && { Authorization: `Bearer ${token}` }), // Only add token if exists
             },
             params: {
                 page: page,
@@ -470,18 +481,18 @@ const fetchComments = async (page: number = 1) => {
         if (response.data.state === 1) {
              // Ensure comment.is_liked is correctly initialized from backend response if available
              comments.value = response.data.comments.map((comment: Comment) => ({
-                ...comment,
-                replies: [],
-                showReplies: false,
-                loadingReplies: false,
-                is_liked: comment.is_liked || false, // Initialize is_liked from backend or false
-            }));
-            pagination.value = {
-                current_page: response.data.current_page,
-                total_pages: response.data.total_pages,
-                total_items: response.data.total_items,
-                per_page: response.data.per_page,
-            };
+                 ...comment,
+                 replies: [],
+                 showReplies: false,
+                 loadingReplies: false,
+                 is_liked: comment.is_liked || false, // Initialize is_liked from backend or false
+             }));
+             pagination.value = {
+                 current_page: response.data.current_page,
+                 total_pages: response.data.total_pages,
+                 total_items: response.data.total_items,
+                 per_page: response.data.per_page,
+             };
         } else {
             console.error('Error fetching comments: Invalid response state', response.data);
             comments.value = []; // Clear comments on error
@@ -489,16 +500,16 @@ const fetchComments = async (page: number = 1) => {
         }
     } catch (error) {
         console.error('Error fetching comments:', error);
-         // Comments might be visible to non-logged-in users, only alert/redirect on specific errors
-         if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
-             console.log("User token invalid for comments fetch, may not get personalized like status.");
-             // No need to alert or redirect here if comments are publicly visible
-         } else {
-              console.error('Failed to fetch comments:', error);
-              // Optionally alert for other errors if comments are critical
-         }
-         comments.value = [];
-         pagination.value = { current_page: 1, total_pages: 1, total_items: 0, per_page: 10 };
+          // Comments might be visible to non-logged-in users, only alert/redirect on specific errors
+          if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
+               console.log("User token invalid for comments fetch, may not get personalized like status.");
+               // No need to alert or redirect here if comments are publicly visible
+          } else {
+               console.error('Failed to fetch comments:', error);
+               // Optionally alert for other errors if comments are critical
+          }
+          comments.value = [];
+          pagination.value = { current_page: 1, total_pages: 1, total_items: 0, per_page: 10 };
     } finally {
         loadingComments.value = false;
     }
@@ -506,52 +517,52 @@ const fetchComments = async (page: number = 1) => {
 
 // 获取子评论列表 - 代码保持不变 (更新了 is_liked 初始化)
 const fetchReplies = async (parentComment: Comment) => {
-      if (!parentComment || parentComment.reply_count === 0) return;
+       if (!parentComment || parentComment.reply_count === 0) return;
 
-      if (parentComment.replies && parentComment.replies.length > 0 && parentComment.showReplies) {
-          parentComment.showReplies = false;
-          return;
-      }
-      if (parentComment.replies && parentComment.replies.length > 0 && !parentComment.showReplies) {
-           parentComment.showReplies = true;
+       if (parentComment.replies && parentComment.replies.length > 0 && parentComment.showReplies) {
+           parentComment.showReplies = false;
            return;
-      }
+       }
+       if (parentComment.replies && parentComment.replies.length > 0 && !parentComment.showReplies) {
+            parentComment.showReplies = true;
+            return;
+       }
 
-      parentComment.loadingReplies = true;
-      try {
-        const token = localStorage.getItem('token'); // Get token
-          const response = await axios.get(`http://127.0.0.1:5000/comment/${parentComment.id}/replies`, {
-               headers: {
-                 ...(token && { Authorization: `Bearer ${token}` }), // Only add token if exists
-               }
-          });
+       parentComment.loadingReplies = true;
+       try {
+         const token = localStorage.getItem('token'); // Get token
+           const response = await axios.get(`http://127.0.0.1:5000/comment/${parentComment.id}/replies`, {
+                 headers: {
+                    ...(token && { Authorization: `Bearer ${token}` }), // Only add token if exists
+                 }
+           });
 
-          if (response.data.state === 1) {
-             // Ensure reply.is_liked is correctly initialized
-              parentComment.replies = response.data.replies.map((reply: Comment) => ({
-                  ...reply,
-                  is_liked: reply.is_liked || false, // Initialize is_liked from backend or false
-              }));
-              parentComment.showReplies = true;
-          } else {
-              console.error('Error fetching replies: Invalid response state', response.data);
-               // Only alert for critical errors, not just missing personalized state
-               // alert("加载回复失败: " + (response.data.message || "未知错误"));
-               parentComment.replies = [];
-          }
-      } catch (error) {
-          console.error('Error fetching replies:', error);
-           if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
-              console.log("User token invalid for replies fetch, may not get personalized like status.");
-              // No need to alert or redirect here if replies are publicly visible
+           if (response.data.state === 1) {
+              // Ensure reply.is_liked is correctly initialized
+               parentComment.replies = response.data.replies.map((reply: Comment) => ({
+                   ...reply,
+                   is_liked: reply.is_liked || false, // Initialize is_liked from backend or false
+               }));
+               parentComment.showReplies = true;
            } else {
-              console.error('Failed to fetch replies:', error);
-               // Optionally alert for other errors
+               console.error('Error fetching replies: Invalid response state', response.data);
+                 // Only alert for critical errors, not just missing personalized state
+                 // alert("加载回复失败: " + (response.data.message || "未知错误"));
+                 parentComment.replies = [];
            }
-          parentComment.replies = [];
-      } finally {
-          parentComment.loadingReplies = false;
-      }
+       } catch (error) {
+           console.error('Error fetching replies:', error);
+            if (axios.isAxiosError(error) && error.response && error.response.status === 401) {
+               console.log("User token invalid for replies fetch, may not get personalized like status.");
+               // No need to alert or redirect here if replies are publicly visible
+             } else {
+               console.error('Failed to fetch replies:', error);
+                // Optionally alert for other errors
+             }
+            parentComment.replies = [];
+       } finally {
+           parentComment.loadingReplies = false;
+       }
 };
 
 
@@ -566,19 +577,19 @@ const submitComment = async () => {
   if (!newCommentContent.value.trim()) return;
 
   if (!currentUserId.value) {
-      alert("请先登录才能发表评论！");
-      router.push('/login');
-      return;
+       alert("请先登录才能发表评论！");
+       router.push('/login');
+       return;
   }
 
   const payload: { content: string; parent_id?: number | null } = { // Allow parent_id to be null
-      content: newCommentContent.value.trim()
+       content: newCommentContent.value.trim()
   };
 
   if (replyingTo.value) {
-      payload.parent_id = replyingTo.value.id;
+       payload.parent_id = replyingTo.value.id;
   } else {
-      payload.parent_id = null; // Explicitly set to null for top-level comments
+       payload.parent_id = null; // Explicitly set to null for top-level comments
   }
 
   try {
@@ -607,15 +618,15 @@ const submitComment = async () => {
   } catch (error) {
     console.error('Error submitting comment:', error);
     if (axios.isAxiosError(error) && error.response) {
-          if (error.response.status === 401) {
-              alert("请先登录才能发表评论！");
-              router.push('/login');
-          } else {
-              alert("评论发表失败：" + (error.response.data?.message || error.message));
-          }
-      } else {
-          alert("评论发表失败：" + (error instanceof Error ? error.message : String(error)));
-      }
+           if (error.response.status === 401) {
+               alert("请先登录才能发表评论！");
+               router.push('/login');
+           } else {
+               alert("评论发表失败：" + (error.response.data?.message || error.message));
+           }
+       } else {
+           alert("评论发表失败：" + (error instanceof Error ? error.message : String(error)));
+       }
   }
 };
 
@@ -650,161 +661,161 @@ const cancelReply = () => {
 
 // 切换评论的点赞状态 - 代码保持不变
 const toggleLikeComment = async (comment: Comment) => {
-      if (!currentUserId.value) {
-          alert("请先登录才能点赞评论！");
-          router.push('/login');
-          return;
-      }
+       if (!currentUserId.value) {
+           alert("请先登录才能点赞评论！");
+           router.push('/login');
+           return;
+       }
 
-      const url = comment.is_liked
-          ? `http://127.0.0.1:5000/comment/unlike/${comment.id}`
-          : `http://127.0.0.1:5000/comment/like/${comment.id}`;
+       const url = comment.is_liked
+           ? `http://127.0.0.1:5000/comment/unlike/${comment.id}`
+           : `http://127.0.0.1:5000/comment/like/${comment.id}`;
 
-      try {
-        const token = localStorage.getItem('token'); // 获取 token
-          const response = await axios.post(url, {}, {
-               headers: {
-                 Authorization: `Bearer ${token}`,
-               }
-          });
+       try {
+         const token = localStorage.getItem('token'); // 获取 token
+           const response = await axios.post(url, {}, {
+                 headers: {
+                    Authorization: `Bearer ${token}`,
+                 }
+           });
 
-          // 后端接口返回 updated count 和 is_liked
-          if (response.data.state === 1 || response.data.state === 0) {
-              comment.like_count = response.data.like_count; // 使用后端返回的最新点赞数
-              comment.is_liked = response.data.is_liked; // 使用后端返回的最新状态
-              console.log(response.data.message);
-          } else {
+           // 后端接口返回 updated count 和 is_liked
+           if (response.data.state === 1 || response.data.state === 0) {
+               comment.like_count = response.data.like_count; // 使用后端返回的最新点赞数
+               comment.is_liked = response.data.is_liked; // 使用后端返回的最新状态
+               console.log(response.data.message);
+           } else {
                console.error('Error toggling comment like: Invalid response state', response.data);
-              alert("操作失败：" + (response.data.message || "未知错误"));
-          }
+               alert("操作失败：" + (response.data.message || "未知错误"));
+           }
 
-      } catch (error) {
+       } catch (error) {
            console.error('Error toggling comment like:', error);
            if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录才能点赞评论！");
-                  router.push('/login');
-              } else {
-                 alert("操作失败：" + (error.response.data?.message || error.message));
-              }
-          } else {
-              alert("操作失败：" + (error instanceof Error ? error.message : String(error)));
-          }
-      }
+               if (error.response.status === 401) {
+                   alert("请先登录才能点赞评论！");
+                   router.push('/login');
+               } else {
+                  alert("操作失败：" + (error.response.data?.message || error.message));
+               }
+           } else {
+               alert("操作失败：" + (error instanceof Error ? error.message : String(error)));
+           }
+       }
 };
 
 // 举报评论 - 代码保持不变
 const reportComment = async (commentId: number) => {
-      if (!confirm("确定要举报这条评论吗？")) {
-          return;
-      }
-       if (!currentUserId.value) {
-          alert("请先登录才能举报评论！");
-          router.push('/login');
-          return;
-      }
-      try {
-        const token = localStorage.getItem('token'); // 获取 token
-          const response = await axios.post(`http://127.0.0.1:5000/comment/report/${commentId}`, {}, {
-               headers: {
-                  Authorization: `Bearer ${token}`,
-               }
-          });
-
-          if (response.data.state === 1) {
-              alert("评论举报成功！感谢您的反馈。");
-              // Optimistically update the status in the frontend list
-              const findAndUpdateComment = (comments: Comment[], id: number) => {
-                 for (const c of comments) {
-                    if (c.id === id) {
-                       c.status = 3; // Assuming status 3 means reported
-                       return true;
-                    }
-                    if (c.replies && findAndUpdateComment(c.replies, id)) {
-                        return true;
-                    }
+       if (!confirm("确定要举报这条评论吗？")) {
+           return;
+       }
+        if (!currentUserId.value) {
+           alert("请先登录才能举报评论！");
+           router.push('/login');
+           return;
+       }
+       try {
+         const token = localStorage.getItem('token'); // 获取 token
+           const response = await axios.post(`http://127.0.0.1:5000/comment/report/${commentId}`, {}, {
+                 headers: {
+                    Authorization: `Bearer ${token}`,
                  }
-                 return false;
-              };
-              findAndUpdateComment(comments.value, commentId);
+           });
 
-          } else {
+           if (response.data.state === 1) {
+               alert("评论举报成功！感谢您的反馈。");
+               // Optimistically update the status in the frontend list
+               const findAndUpdateComment = (comments: Comment[], id: number) => {
+                   for (const c of comments) {
+                     if (c.id === id) {
+                        c.status = 3; // Assuming status 3 means reported
+                        return true;
+                     }
+                     if (c.replies && findAndUpdateComment(c.replies, id)) {
+                         return true;
+                     }
+                   }
+                   return false;
+               };
+               findAndUpdateComment(comments.value, commentId);
+
+           } else {
                console.error('Error reporting comment: Invalid response state', response.data);
-              alert("举报失败：" + (response.data.message || "未知错误"));
-          }
+               alert("举报失败：" + (response.data.message || "未知错误"));
+           }
 
-      } catch (error) {
+       } catch (error) {
            console.error('Error reporting comment:', error);
            if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录才能举报评论！");
-                  router.push('/login');
-              } else {
-                 alert("举报失败：" + (error.response.data?.message || error.message));
-              }
-          } else {
-              alert("举报失败：" + (error instanceof Error ? error.message : String(error)));
-          }
-      }
+               if (error.response.status === 401) {
+                   alert("请先登录才能举报评论！");
+                   router.push('/login');
+               } else {
+                  alert("举报失败：" + (error.response.data?.message || error.message));
+               }
+           } else {
+               alert("举报失败：" + (error instanceof Error ? error.message : String(error)));
+           }
+       }
 };
 
 // 删除评论 - 代码保持不变
 const deleteComment = async (commentId: number) => {
-      if (!confirm("确定要删除这条评论吗？")) {
-          return;
-      }
-       if (!currentUserId.value) {
-          alert("请先登录才能删除评论！");
-          router.push('/login');
-          return;
-      }
-      try {
-        const token = localStorage.getItem('token'); // 获取 token
-          const response = await axios.delete(`http://127.0.0.1:5000/comment/delete/${commentId}`, {
-               headers: {
-                  Authorization: `Bearer ${token}`,
-               }
-          });
+       if (!confirm("确定要删除这条评论吗？")) {
+           return;
+       }
+        if (!currentUserId.value) {
+           alert("请先登录才能删除评论！");
+           router.push('/login');
+           return;
+       }
+       try {
+         const token = localStorage.getItem('token'); // 获取 token
+           const response = await axios.delete(`http://127.0.0.1:5000/comment/delete/${commentId}`, {
+                 headers: {
+                    Authorization: `Bearer ${token}`,
+                 }
+           });
 
-          if (response.data.state === 1) {
-              alert("评论删除成功！");
-              // Remove the comment/reply from the frontend list
-              const removeComment = (comments: Comment[], id: number): boolean => {
-                  for (let i = 0; i < comments.length; i++) {
-                      if (comments[i].id === id) {
-                          comments.splice(i, 1);
-                          return true;
-                      }
-                      if (comments[i].replies && removeComment(comments[i].replies!, id)) {
-                          comments[i].reply_count = Math.max(0, comments[i].reply_count - 1); // Decrement parent reply count
-                          return true;
-                      }
-                  }
-                  return false;
-              };
-              removeComment(comments.value, commentId);
+           if (response.data.state === 1) {
+               alert("评论删除成功！");
+               // Remove the comment/reply from the frontend list
+               const removeComment = (comments: Comment[], id: number): boolean => {
+                    for (let i = 0; i < comments.length; i++) {
+                         if (comments[i].id === id) {
+                            comments.splice(i, 1);
+                            return true;
+                         }
+                         if (comments[i].replies && removeComment(comments[i].replies!, id)) {
+                             comments[i].reply_count = Math.max(0, comments[i].reply_count - 1); // Decrement parent reply count
+                             return true;
+                         }
+                    }
+                    return false;
+               };
+               removeComment(comments.value, commentId);
 
-          } else {
+           } else {
                console.error('Error deleting comment: Invalid response state', response.data);
-              alert("删除失败：" + (response.data.message || "未知错误"));
-          }
+               alert("删除失败：" + (response.data.message || "未知错误"));
+           }
 
-      } catch (error) {
+       } catch (error) {
            console.error('Error deleting comment:', error);
            if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录或您无权删除此评论！");
-                  router.push('/login');
-              } else if (error.response.status === 403) {
-                  alert("您无权删除此评论！");
-              }
-              else {
-                  alert("删除失败：" + (error.response.data?.message || error.message));
-              }
-          } else {
-              alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
-          }
-      }
+               if (error.response.status === 401) {
+                   alert("请先登录或您无权删除此评论！");
+                   router.push('/login');
+               } else if (error.response.status === 403) {
+                   alert("您无权删除此评论！");
+               }
+               else {
+                   alert("删除失败：" + (error.response.data?.message || error.message));
+               }
+           } else {
+               alert("删除失败：" + (error instanceof Error ? error.message : String(error)));
+           }
+       }
 };
 
 
@@ -812,9 +823,9 @@ const deleteComment = async (commentId: number) => {
 const goToPage = (page: number) => {
     if (page >= 1 && page <= pagination.value.total_pages && page !== pagination.value.current_page) {
         fetchComments(page);
-          nextTick(() => {
-              document.querySelector('.comments-card')?.scrollIntoView({ behavior: 'smooth' });
-          });
+         nextTick(() => {
+             document.querySelector('.comments-card')?.scrollIntoView({ behavior: 'smooth' });
+         });
     }
 };
 
@@ -826,11 +837,11 @@ const toggleArticleLike = async () => {
         return;
     }
 
-      if (!currentUserId.value) {
-          alert("请先登录才能点赞文章！");
-          router.push('/login');
-          return;
-      }
+       if (!currentUserId.value) {
+           alert("请先登录才能点赞文章！");
+           router.push('/login');
+           return;
+       }
 
     // Determine URL based on current isLiked status
     const url = isLiked.value
@@ -846,55 +857,55 @@ const toggleArticleLike = async () => {
             },
         });
 
-         // --- Update state based on backend response ---
-         if (response.data.state === 1) {
-              // Backend should ideally return the new count and status
-              if (response.data.hasOwnProperty('like_count')) {
-                  post.value.like_count = response.data.like_count;
-              }
-              // Update isLiked status based on the action taken
-              isLiked.value = !isLiked.value; // Toggle state optimistically or based on response if available
-              // If backend explicitly returns is_liked:
-              // if (response.data.hasOwnProperty('is_liked')) { isLiked.value = response.data.is_liked; }
+           // --- Update state based on backend response ---
+           if (response.data.state === 1) {
+               // Backend should ideally return the new count and status
+               if (response.data.hasOwnProperty('like_count')) {
+                   post.value.like_count = response.data.like_count;
+               }
+               // Update isLiked status based on the action taken
+               isLiked.value = !isLiked.value; // Toggle state optimistically or based on response if available
+               // If backend explicitly returns is_liked:
+               // if (response.data.hasOwnProperty('is_liked')) { isLiked.value = response.data.is_liked; }
 
-         } else if (response.data.state === 0) {
-             // Handle specific backend errors
-              alert(response.data.message || '操作失败');
-         } else {
-             console.error('Error toggling article like: Invalid response state', response.data);
-              alert('操作失败');
-         }
+           } else if (response.data.state === 0) {
+               // Handle specific backend errors
+               alert(response.data.message || '操作失败');
+           } else {
+               console.error('Error toggling article like: Invalid response state', response.data);
+               alert('操作失败');
+           }
 
     } catch (error: any) {
         console.error('Error toggling article like:', error);
-          if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录才能点赞文章！");
-                  router.push('/login');
-              } else {
-                  alert(`操作失败: ${error.response.data?.message || error.response.status}`);
-              }
-          } else {
-              alert(`操作失败: ${error instanceof Error ? error.message : String(error)}`);
-          }
-          // If an error occurred after an optimistic update, you might need to revert the state
-          // This is why getting the final state from the backend is preferred.
+           if (axios.isAxiosError(error) && error.response) {
+               if (error.response.status === 401) {
+                   alert("请先登录才能点赞文章！");
+                   router.push('/login');
+               } else {
+                   alert(`操作失败: ${error.response.data?.message || error.response.status}`);
+               }
+           } else {
+               alert(`操作失败: ${error instanceof Error ? error.message : String(error)}`);
+           }
+           // If an error occurred after an optimistic update, you might need to revert the state
+           // This is why getting the final state from the backend is preferred.
     }
 };
 
 // --- 新增的文章收藏/取消收藏功能 ---
 const toggleArticleFavorite = async () => {
     const articleId = post.value.id;
-     if (!articleId || typeof articleId !== 'number') {
+      if (!articleId || typeof articleId !== 'number') {
         console.error("Article ID is not loaded yet.");
         return;
     }
 
-      if (!currentUserId.value) {
-          alert("请先登录才能收藏文章！");
-          router.push('/login');
-          return;
-      }
+       if (!currentUserId.value) {
+           alert("请先登录才能收藏文章！");
+           router.push('/login');
+           return;
+       }
 
     // Determine URL based on current isFavorited status
     const url = isFavorited.value
@@ -910,37 +921,37 @@ const toggleArticleFavorite = async () => {
             },
         });
 
-          // --- Update state based on backend response ---
-         if (response.data.state === 1) {
-              // Backend should ideally return the new count and status
-              if (response.data.hasOwnProperty('favorite_count')) {
-                  post.value.favorite_count = response.data.favorite_count;
-              }
-              // Update isFavorited status based on the action taken
-              isFavorited.value = !isFavorited.value; // Toggle state optimistically or based on response if available
-               // If backend explicitly returns is_favorited:
-              // if (response.data.hasOwnProperty('is_favorited')) { isFavorited.value = response.data.is_favorited; }
+           // --- Update state based on backend response ---
+           if (response.data.state === 1) {
+               // Backend should ideally return the new count and status
+               if (response.data.hasOwnProperty('favorite_count')) {
+                   post.value.favorite_count = response.data.favorite_count;
+               }
+               // Update isFavorited status based on the action taken
+               isFavorited.value = !isFavorited.value; // Toggle state optimistically or based on response if available
+                // If backend explicitly returns is_favorited:
+                // if (response.data.hasOwnProperty('is_favorited')) { isFavorited.value = response.data.is_favorited; }
 
-         } else if (response.data.state === 0) {
-              alert(response.data.message || '操作失败');
-         } else {
-             console.error('Error toggling article favorite: Invalid response state', response.data);
-              alert('操作失败');
-         }
+           } else if (response.data.state === 0) {
+               alert(response.data.message || '操作失败');
+           } else {
+               console.error('Error toggling article favorite: Invalid response state', response.data);
+               alert('操作失败');
+           }
 
     } catch (error: any) {
         console.error('Error toggling article favorite:', error);
-          if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录才能收藏文章！");
-                  router.push('/login');
-              } else {
-                  alert(`操作失败: ${error.response.data?.message || error.response.status}`);
-              }
-          } else {
-              alert(`操作失败: ${error instanceof Error ? error.message : String(error)}`);
-          }
-          // If an error occurred after an optimistic update, you might need to revert the state
+           if (axios.isAxiosError(error) && error.response) {
+               if (error.response.status === 401) {
+                   alert("请先登录才能收藏文章！");
+                   router.push('/login');
+               } else {
+                   alert(`操作失败: ${error.response.data?.message || error.response.status}`);
+               }
+           } else {
+               alert(`操作失败: ${error instanceof Error ? error.message : String(error)}`);
+           }
+           // If an error occurred after an optimistic update, you might need to revert the state
     }
 };
 
@@ -953,8 +964,8 @@ const fetchLikers = async () => {
     }
 
     if (!currentUserId.value || post.value.user_id !== currentUserId.value) {
-         alert("您无权查看此列表！"); // Should not happen if button is correctly hidden, but good safeguard
-         return;
+           alert("您无权查看此列表！"); // Should not happen if button is correctly hidden, but good safeguard
+           return;
     }
 
     loadingLikers.value = true;
@@ -976,13 +987,13 @@ const fetchLikers = async () => {
             showLikersModal.value = true; // Show the modal on success
         } else {
             console.error('Error fetching likers:', response.data);
-             alert("获取点赞用户列表失败：" + (response.data.message || "未知错误"));
-             likers.value = []; // Clear the list on error
-             showLikersModal.value = false; // Hide modal on error
+            alert("获取点赞用户列表失败：" + (response.data.message || "未知错误"));
+            likers.value = []; // Clear the list on error
+            showLikersModal.value = false; // Hide modal on error
         }
     } catch (error: any) {
         console.error('Error fetching likers:', error);
-         if (axios.isAxiosError(error) && error.response) {
+          if (axios.isAxiosError(error) && error.response) {
               if (error.response.status === 401) {
                   alert("请先登录才能查看点赞用户列表！");
                   router.push('/login');
@@ -1001,17 +1012,17 @@ const fetchLikers = async () => {
     }
 };
 
-// --- 新增：模拟获取收藏用户列表 (基于您提供的结构) ---
+// --- 新增：获取收藏用户列表 ---
 const fetchFavoriters = async () => {
     const articleId = post.value.id;
-     if (!articleId || typeof articleId !== 'number') {
-       console.error("Article ID is not loaded yet.");
-       return;
+      if (!articleId || typeof articleId !== 'number') {
+        console.error("Article ID is not loaded yet.");
+        return;
     }
 
-     if (!currentUserId.value || post.value.user_id !== currentUserId.value) {
-         alert("您无权查看此列表！"); // Should not happen if button is correctly hidden, but good safeguard
-         return;
+      if (!currentUserId.value || post.value.user_id !== currentUserId.value) {
+           alert("您无权查看此列表！"); // Should not happen if button is correctly hidden, but good safeguard
+           return;
     }
 
     loadingFavoriters.value = true;
@@ -1044,19 +1055,19 @@ const fetchFavoriters = async () => {
     } catch (error: any) {
         console.error('Error fetching favoriters:', error);
         if (axios.isAxiosError(error) && error.response) {
-              if (error.response.status === 401) {
-                  alert("请先登录才能查看收藏用户列表！");
-                  router.push('/login');
-              } else if (error.response.status === 403) {
-                  alert("您无权查看此列表！"); // Permission denied for non-author
-              } else {
-                  alert(`获取收藏用户列表失败: ${error.response.data?.message || error.response.status}`);
-              }
-          } else {
-              alert(`获取收藏用户列表失败: ${error instanceof Error ? error.message : String(error)}`);
-          }
-          favoriters.value = []; // Clear the list on error
-          showFavoritersModal.value = false; // Hide modal on error
+               if (error.response.status === 401) {
+                   alert("请先登录才能查看收藏用户列表！");
+                   router.push('/login');
+               } else if (error.response.status === 403) {
+                   alert("您无权查看此列表！"); // Permission denied for non-author
+               } else {
+                   alert(`获取收藏用户列表失败: ${error.response.data?.message || error.response.status}`);
+               }
+           } else {
+               alert(`获取收藏用户列表失败: ${error instanceof Error ? error.message : String(error)}`);
+           }
+           favoriters.value = []; // Clear the list on error
+           showFavoritersModal.value = false; // Hide modal on error
     } finally {
         loadingFavoriters.value = false;
     }
@@ -1082,20 +1093,20 @@ onMounted(async () => {
 
     // 1. 尝试获取当前用户 ID (从 localStorage 获取)
     const storedUserId = localStorage.getItem('user_id');
-     if (storedUserId) {
+      if (storedUserId) {
         const parsedUserId = parseInt(storedUserId, 10);
         if (!isNaN(parsedUserId)) {
              currentUserId.value = parsedUserId;
         }
-     }
+      }
 
 
   // 2. 加载文章详情 (不包含用户点赞收藏状态)
   await fetchArticleDetails(postId);
 
   // 3. 如果文章详情加载成功且用户已登录，则单独检查当前用户对文章的点赞和收藏状态
-  if (post.value.id !== null && currentUserId.value !== null) {
-      // Ensure post.value.id is a number for the check functions
+  // Ensure post.value.id is a number before calling check status functions
+  if (post.value.id !== null && typeof post.value.id === 'number' && currentUserId.value !== null) {
       checkArticleLikedStatus(post.value.id);
       checkArticleFavoritedStatus(post.value.id);
   }
@@ -1123,6 +1134,23 @@ onMounted(async () => {
 }
 .post-meta .clickable-author:hover {
     color: #0056b3; /* Darker color on hover */
+}
+
+/* New styles for article tags */
+.post-tags {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.tag-item {
+    display: inline-block; /* Allows margin between tags */
+    background-color: #e0f7fa; /* Light blue background */
+    color: #0077cc;
+    padding: 4px 10px;
+    margin: 0 5px 5px 0; /* Add margin to separate tags */
+    border-radius: 12px; /* Rounded corners */
+    font-size: 13px;
+    border: 1px solid #b2ebf2; /* Subtle border */
 }
 
 

@@ -3,21 +3,14 @@
     <router-link to="/" class="logo">NexTecht</router-link>
 
     <div class="center-group">
-      <div class="search-box">
-        <input v-model="keyword" placeholder="搜索用户、标题或内容" />
-        <button @click="handleSearch">
-          <i class="icon-search"></i>
-        </button>
-      </div>
-
       <router-link
         v-if="isLoggedIn"
         to="/create"
-        class="write-btn"
+        class="write-btn shifted-left"
       >+创作</router-link>
     </div>
 
-    <div class="header-actions">
+    <div class="header-actions shifted-left-actions">
       <div v-if="!isLoggedIn" class="action-group">
         <button @click="goLogin">登录 / 注册</button>
       </div>
@@ -39,7 +32,6 @@
   </header>
 </template>
 
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -47,7 +39,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const isLoggedIn = ref(false)
 const avatarUrl = ref('/default-avatar.png')
-const keyword = ref('')
 const showDropdown = ref(false)
 let hideTimer: number | null = null
 
@@ -58,10 +49,6 @@ onMounted(() => {
     avatarUrl.value = localStorage.getItem('avatar') || '/default-avatar.png'
   }
 })
-
-function handleSearch() {
-  console.log('搜索关键词：', keyword.value)
-}
 
 function goLogin() {
   router.push('/login')
@@ -100,7 +87,11 @@ function onMouseLeave() {
   padding: 12px 30px;
   background: linear-gradient(to right, #dfe9f3, #ffffff);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  position: relative;
+  position: fixed; /* 使用 fixed 定位 */
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 10;
 }
 
@@ -116,46 +107,8 @@ function onMouseLeave() {
   display: flex;
   align-items: center;
   flex: 1;
-  justify-content: center;
+  justify-content: flex-end; /* 保持靠右对齐 */
   gap: 20px;
-  margin: 0 40px;
-}
-
-.search-box {
-  display: flex;
-  max-width: 500px;
-  width: 100%;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 30px;
-  overflow: hidden;
-  transition: box-shadow 0.3s ease;
-}
-
-.search-box input {
-  flex: 1;
-  padding: 10px 16px;
-  border: none;
-  font-size: 14px;
-  outline: none;
-}
-
-.search-box button {
-  background: transparent;
-  border: none;
-  padding: 0 16px;
-  cursor: pointer;
-  color: #555;
-}
-
-.search-box:hover {
-  box-shadow: 0 0 8px rgba(0, 123, 255, 0.2);
-}
-
-/* 🔍 搜索按钮图标 */
-.icon-search::before {
-  content: '🔍';
-  font-size: 18px;
 }
 
 .write-btn {
@@ -176,7 +129,10 @@ function onMouseLeave() {
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
 
-/* ✅ 登录 / 注册 按钮 样式 */
+.shifted-left {
+  margin-right: 150px; /* 调整这个值来控制 "+创作" 左移的距离 */
+}
+
 .action-group button {
   padding: 6px 14px;
   background: linear-gradient(to right, #56ccf2, #2f80ed);
@@ -198,6 +154,10 @@ function onMouseLeave() {
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+.shifted-left-actions {
+  margin-right: 50px; /* 调整这个值来控制 "个人信息" 那一栏左移的距离 */
 }
 
 .avatar-container {
@@ -246,7 +206,4 @@ function onMouseLeave() {
 .dropdown-menu div:hover {
   color: #007bff;
 }
-
-
-
 </style>
