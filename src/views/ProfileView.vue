@@ -51,14 +51,14 @@
         :class="{ active: activeTab === 'likes' }"
         @click="((activeTab = 'likes'), fetchLikedArticles())"
       >
-        我的喜欢 ({{ likedArticles.length }})
+        我的喜欢 ({{ user.like_count }})
       </div>
       <div
         class="tab-item"
         :class="{ active: activeTab === 'collections' }"
         @click="((activeTab = 'collections'), fetchCollectedArticles())"
       >
-        我的收藏 ({{ collectedArticles.length }})
+        我的收藏 ({{ user.collect_count }})
       </div>
       <div
         class="tab-item"
@@ -80,7 +80,7 @@
         :class="{ active: activeTab === 'history' }"
         @click="((activeTab = 'history'), fetchBrowseHistory())"
       >
-        浏览记录 ({{ BrowseHistory.length }})
+        浏览记录
       </div>
     </div>
 
@@ -233,11 +233,11 @@
             <p class="post-excerpt">{{ getExcerpt(article.content) }}</p>
             <div class="author-info">
               <img
-                :src="article.author_avatar || defaultAvatar"
+                :src="article.avatar || defaultAvatar"
                 alt="作者头像"
                 class="author-avatar-small"
               />
-              <span>{{ article.author_nickname }}</span>
+              <span>{{ article.nickname }}</span>
               <span class="history-time">最近浏览于: {{ formatTime(article.browse_time) }}</span>
             </div>
           </div>
@@ -399,6 +399,8 @@ const user = ref({
   phone: '', // Add phone
   follower_count: 0,
   following_count: 0,
+  like_count: 0,
+  collect_count: 0,
 })
 
 interface Post {
@@ -435,9 +437,9 @@ interface BrowseHistoryItem {
   article_id: number
   title: string
   content: string
-  author_avatar?: string
-  author_nickname: string
-  view_time: string // Timestamp for when the article was viewed
+  avatar?: string
+  nickname: string
+  browse_time: string // Timestamp for when the article was viewed
 }
 
 const posts = ref<Post[]>([])
@@ -619,6 +621,38 @@ async function fetchProfileAndInitialData(token: string) {
         user.value.follower_count = 0
         // Optionally alert user if follow stats loading failed
         // alert(`加载关注/粉丝数失败: ${String(followError)}`);
+      }
+      //喜欢
+      const likeStatsRes = await axios.get(
+        `http://127.0.0.1:5000/user/like_count`,
+        {
+          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+        },
+      )
+      if (likeStatsRes.data && typeof likeStatsRes.data.like_count !== 'undefined') {
+        user.value.like_count = likeStatsRes.data.like_count
+      } else {
+        console.error(
+          'Failed to fetch follow stats or data in unexpected format:',
+          likeStatsRes.data,
+        )
+        user.value.like_count = 0
+      }
+      //收藏
+      const collectStatsRes = await axios.get(
+        `http://127.0.0.1:5000/user/collect_count`,
+        {
+          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+        },
+      )
+      if (collectStatsRes.data && typeof collectStatsRes.data.collect_count !== 'undefined') {
+        user.value.collect_count = collectStatsRes.data.collect_count
+      } else {
+        console.error(
+          'Failed to fetch follow stats or data in unexpected format:',
+          collectStatsRes.data,
+        )
+        user.value.collect_count = 0
       }
     } else {
       console.warn('User ID not available from profile fetch, skipping initial follow stats.')
@@ -1213,31 +1247,27 @@ async function followUser(targetUser: UserWithStatus) {
         headers: { Authorization: `Bearer ${token}` },
       },
     )
+    // Assuming success state is 1
+    console.log(`Followed user ${targetUser.username}`)
 
-    if (res.data.state === 1) {
-      // Assuming success state is 1
-      console.log(`Followed user ${targetUser.username}`)
+    // Refetch status for the affected user to update button text/class
+    const updatedStatus = await fetchFollowStatus(targetUser.id)
+    Object.assign(targetUser, updatedStatus) // Update the user object in the list
 
-      // Refetch status for the affected user to update button text/class
-      const updatedStatus = await fetchFollowStatus(targetUser.id)
-      Object.assign(targetUser, updatedStatus) // Update the user object in the list
-
-      // Update main user's following count (optimistically or by refetching)
-      if (user.value.id !== null) {
-        // Ensure current user ID is available
-        const followStatsRes = await axios.get(
-          `http://127.0.0.1:5000/follow-count/${user.value.id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
-          },
-        )
-        if (followStatsRes.data) {
-          user.value.following_count = followStatsRes.data.following_count
-          user.value.follower_count = followStatsRes.data.follower_count
-        }
+    // Update main user's following count (optimistically or by refetching)
+    if (user.value.id !== null) {
+      // Ensure current user ID is available
+      const followStatsRes = await axios.get(
+        `http://127.0.0.1:5000/follow-count/${user.value.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+        },
+      )
+      if (followStatsRes.data) {
+        user.value.following_count = followStatsRes.data.following_count
+        user.value.follower_count = followStatsRes.data.follower_count
       }
-    } else {
-      alert(`关注失败: ${res.data.message || '未知错误'}`)
+      alert(`关注成功！`)
     }
   } catch (error) {
     console.error(`Error following user ${targetUser.username}:`, error)
@@ -1266,31 +1296,28 @@ async function unfollowUser(targetUser: UserWithStatus) {
       headers: { Authorization: `Bearer ${token}` },
     })
 
-    if (res.data.state === 1) {
-      // Assuming success state is 1
-      console.log(`Unfollowed user ${targetUser.username}`)
+    // Assuming success state is 1
+    console.log(`Unfollowed user ${targetUser.username}`)
 
-      // Refetch status for the affected user to update button text/class
-      const updatedStatus = await fetchFollowStatus(targetUser.id)
-      Object.assign(targetUser, updatedStatus) // Update the user object in the list
+    // Refetch status for the affected user to update button text/class
+    const updatedStatus = await fetchFollowStatus(targetUser.id)
+    Object.assign(targetUser, updatedStatus) // Update the user object in the list
 
-      // Update main user's following count (optimistically or by refetching)
-      if (user.value.id !== null) {
-        // Ensure current user ID is available
-        const followStatsRes = await axios.get(
-          `http://127.0.0.1:5000/follow-count/${user.value.id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
-          },
-        )
-        if (followStatsRes.data) {
-          user.value.following_count = followStatsRes.data.following_count
-          user.value.follower_count = followStatsRes.data.follower_count
-        }
+    // Update main user's following count (optimistically or by refetching)
+    if (user.value.id !== null) {
+      // Ensure current user ID is available
+      const followStatsRes = await axios.get(
+        `http://127.0.0.1:5000/follow-count/${user.value.id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+        },
+      )
+      if (followStatsRes.data) {
+        user.value.following_count = followStatsRes.data.following_count
+        user.value.follower_count = followStatsRes.data.follower_count
       }
-    } else {
-      alert(`取消关注失败: ${res.data.message || '未知错误'}`)
     }
+    alert(`取消关注成功！`)
   } catch (error) {
     console.error(`Error unfollowing user ${targetUser.username}:`, error)
     if (isAxiosError(error)) {

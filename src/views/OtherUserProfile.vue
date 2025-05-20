@@ -64,18 +64,6 @@
     </div>
     <div
       class="tab-item"
-      :class="{ active: activeTab === 'likes' }"
-      @click="activeTab = 'likes'"
-    >
-      喜欢 (0) </div>
-    <div
-      class="tab-item"
-      :class="{ active: activeTab === 'collections' }"
-      @click="activeTab = 'collections'"
-    >
-      收藏 (0) </div>
-    <div
-      class="tab-item"
       :class="{ active: activeTab === 'following' }"
       @click="activeTab = 'following'; fetchTargetUserFollowing()"
     >
@@ -117,16 +105,6 @@
       </div>
       <p v-else class="no-post">Ta还没有发表过任何文章。</p>
     </div>
-
-    <div v-if="activeTab === 'likes'" class="placeholder-section">
-      <h3>Ta的喜欢</h3>
-      <p>这里将显示Ta喜欢的文章。</p>
-      </div>
-
-    <div v-if="activeTab === 'collections'" class="placeholder-section">
-      <h3>Ta的收藏</h3>
-      <p>这里将显示Ta收藏的文章。</p>
-      </div>
 
     <div v-if="activeTab === 'following'" class="follow-section">
        <h3>{{ targetUser.username }}关注的人</h3>

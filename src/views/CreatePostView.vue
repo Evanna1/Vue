@@ -3,7 +3,7 @@
   <div class="create-post-container">
     <div class="header-bar">
       <h1 class="page-title">博客创作</h1>
-      </div>
+    </div>
 
     <div class="form-card privacy-toggle-section">
       <label for="isPrivateToggleInput">是否私密</label>
@@ -32,12 +32,6 @@
         placeholder="用逗号分隔，如：前端,Vue,生活"
         class="input-field"
       />
-    </div>
-
-    <div class="form-card">
-      <label>封面图（可选）</label>
-      <input type="file" @change="handleCoverUpload" accept="image/*" class="input-field" />
-      <img v-if="coverPreview" :src="coverPreview" class="cover-preview" />
     </div>
 
     <div class="form-card">
@@ -73,19 +67,32 @@
         <h2>🧠 AI 辅助创作</h2>
 
         <label for="question">💬 请输入问题：</label><br />
-        <textarea v-model="question" id="question" placeholder="比如：请结合云南旅游写一篇博客"></textarea><br />
+        <textarea
+          v-model="question"
+          id="question"
+          placeholder="比如：请结合云南旅游写一篇博客"
+        ></textarea
+        ><br />
 
         <button @click="askGemini" :disabled="loading">提交问题</button>
 
         <h3>🤖 AI 的回答：</h3>
-        <div id="response" style="white-space: pre-wrap;">{{ response }}
+        <div id="response" style="white-space: pre-wrap">
+          {{ response }}
           <button class="copy-icon-btn" @click="copyResponse" title="复制">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <path d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-1 16H9v-12h9v12z"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="currentColor"
+            >
+              <path
+                d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm-1 16H9v-12h9v12z"
+              />
             </svg>
           </button>
         </div>
-
       </div>
     </div>
   </div>
@@ -115,7 +122,7 @@ const showDialog = ref(false)
 const question = ref('')
 const response = ref('')
 const loading = ref(false)
-const token = localStorage.getItem('token') 
+const token = localStorage.getItem('token')
 
 async function askGemini() {
   loading.value = true
@@ -124,9 +131,8 @@ async function askGemini() {
     // 这里写调用后端接口逻辑，示范：
     const res = await fetch('http://127.0.0.1:5000/article/aichat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' , 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ question: question.value })
-      
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ question: question.value }),
     })
     const data = await res.json()
     response.value = data.answer || 'AI 未返回有效内容'
@@ -138,28 +144,29 @@ async function askGemini() {
 }
 
 async function copyResponse() {
-    const responseText = document.getElementById('response').innerText;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(responseText)
-        .then(() => {
-          // 可选：提供复制成功的提示
-          alert('回答已复制到剪贴板！');
-        })
-        .catch(err => {
-          console.error('复制到剪贴板失败:', err);
-          alert('复制失败，请手动选择文本进行复制。');
-        });
-    } else {
-      // 如果浏览器不支持 navigator.clipboard，则提供备用方案（例如使用 textarea 选中并让用户手动复制）
-      const textArea = document.createElement('textarea');
-      textArea.value = responseText;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      alert('回答已复制到剪贴板！');
-    }
+  const responseText = document.getElementById('response').innerText
+  if (navigator.clipboard) {
+    navigator.clipboard
+      .writeText(responseText)
+      .then(() => {
+        // 可选：提供复制成功的提示
+        alert('回答已复制到剪贴板！')
+      })
+      .catch((err) => {
+        console.error('复制到剪贴板失败:', err)
+        alert('复制失败，请手动选择文本进行复制。')
+      })
+  } else {
+    // 如果浏览器不支持 navigator.clipboard，则提供备用方案（例如使用 textarea 选中并让用户手动复制）
+    const textArea = document.createElement('textarea')
+    textArea.value = responseText
+    document.body.appendChild(textArea)
+    textArea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textArea)
+    alert('回答已复制到剪贴板！')
   }
+}
 
 const editorRef = shallowRef()
 const toolbarConfig = {}
@@ -175,10 +182,10 @@ const editorConfig = {
       customInsert(res: any, insertFn: Function) {
         // 后端返回的是 image_path: "/img/xxx.jpg"
         const imageUrl = res.image_path
-        insertFn(imageUrl)  // 直接插入到光标处
-      }
-    }
-  }
+        insertFn(imageUrl) // 直接插入到光标处
+      },
+    },
+  },
 }
 
 function handleCoverUpload(e: Event) {
@@ -233,22 +240,17 @@ async function publishPost() {
   // Append tags if you have a field for it in the backend and want to include it
   // formData.append('tags', tags.value);
 
-
   if (coverFile) {
     formData.append('cover', coverFile)
   }
 
   try {
-    const response = await axios.post(
-      'http://127.0.0.1:5000/article/create',
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // axios 会自动设置 multipart/form-data 和边界
-        },
-      }
-    )
+    const response = await axios.post('http://127.0.0.1:5000/article/create', formData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // axios 会自动设置 multipart/form-data 和边界
+      },
+    })
 
     alert('发布成功！')
     router.push('/')
@@ -309,13 +311,13 @@ async function publishPost() {
 
 /* NEW STYLES FOR THE PRIVACY TOGGLE SECTION */
 .privacy-toggle-section {
-  flex-direction: row;           /* Override .form-card's column direction */
-  justify-content: space-between;/* "是否私密" label on left, switch on right */
-  align-items: center;           /* Vertically center items in the row */
+  flex-direction: row; /* Override .form-card's column direction */
+  justify-content: space-between; /* "是否私密" label on left, switch on right */
+  align-items: center; /* Vertically center items in the row */
 }
 
 /* Style for the text label "是否私密" within the new section */
-.privacy-toggle-section > label[for="isPrivateToggleInput"] {
+.privacy-toggle-section > label[for='isPrivateToggleInput'] {
   margin-bottom: 0; /* Remove default bottom margin from general label style */
   /* display: block; is default for label, but flex item behavior will manage it */
 }
@@ -361,8 +363,8 @@ label {
 
 .button-group {
   display: flex;
-  justify-content: center; 
-  gap: 50px; 
+  justify-content: center;
+  gap: 50px;
   margin-top: 30px;
 }
 
@@ -421,28 +423,32 @@ label {
 .slider {
   position: absolute;
   cursor: pointer;
-  top: 0; left: 0;
-  right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: #ccc;
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 28px; /* Match height */
 }
 .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 20px; /* Smaller than slider height */
-  width: 20px;  /* Smaller than slider height */
+  width: 20px; /* Smaller than slider height */
   left: 4px;
   bottom: 4px;
   background-color: white;
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 50%;
 }
 input:checked + .slider {
   background-color: #4caf50; /* Green for checked */
 }
 input:checked + .slider:before {
-  transform: translateX(22px); /* (Switch width - knob width - 2*offset) = 50 - 20 - 2*4 = 22, or adjust as needed */
+  transform: translateX(
+    22px
+  ); /* (Switch width - knob width - 2*offset) = 50 - 20 - 2*4 = 22, or adjust as needed */
 }
 .dialog-overlay {
   position: fixed;
@@ -471,8 +477,14 @@ input:checked + .slider:before {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 h2 {
@@ -520,13 +532,13 @@ button:not(:disabled):hover {
   opacity: 0.9;
 }
 
-.dialog > button:first-of-type { 
-  background-color: #5ea8da; 
+.dialog > button:first-of-type {
+  background-color: #5ea8da;
   color: white;
   padding: 6px 12px;
-  margin: 15px auto 0 auto; 
-  display: block; 
-  font-size: 14px; 
+  margin: 15px auto 0 auto;
+  display: block;
+  font-size: 14px;
 }
 h3 {
   color: #333;
