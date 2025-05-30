@@ -1,40 +1,26 @@
 <template>
   <div class="article-detail-container">
-    <div v-if="article" class="article-detail">
-      <h1>{{ article.title }}</h1>
-      <div class="article-meta">
-        <span>作者: {{ article.author }}</span>
-        <span>创建时间: {{ formatDate(article.create_time) }}</span>
-      </div>
-      <div class="article-content">
-        <div v-if="article.image_path" class="article-image">
-          <img :src="article.image_path" alt="文章图片">
-        </div>
-        <div class="article-text" v-html="article.content"></div>
-      </div>
-      <div class="article-stats">
-        <div class="stat-item">
-          <span>阅读量: {{ article.read_count }}</span>
-        </div>
-        <div class="stat-item">
-          <span>评论数: {{ article.comments_count }}</span>
-        </div>
-        <div class="stat-item">
-          <span>点赞数: {{ article.likes_count }}</span>
-        </div>
-        <div class="stat-item">
-          <span>收藏数: {{ article.favorites_count }}</span>
-        </div>
-        <div class="stat-item">
-          <span>状态: {{ formatStatus(article.status) }}</span>
-        </div>
-        <div class="stat-item">
-          <span>权限: {{ formatPermission(article.permission) }}</span>
-        </div>
-      </div>
-    </div>
-    <div v-else>
+    <button @click="backToList" class="back-button">返回</button>
+    <h2>文章详情</h2>
+    <div v-if="mergedIsLoading" class="loading-state">
+      <div class="spinner"></div>
       <p>加载中...</p>
+    </div>
+    <div v-else class="article-content-wrapper">
+      <h3 class="article-title">{{ article.title }}</h3>
+      <div class="article-meta">
+       <div class="article-meta-inline">
+        <span><strong>作者:</strong> {{ article.author }}</span>
+        <span class="separator">|</span>
+        <span><strong>创建时间:</strong> {{ formatDate(article.create_time) }}</span>
+        <span class="separator">|</span>
+        <span><strong>更新时间:</strong> {{ formatDate(article.update_time) }}</span>
+      </div>
+      </div>
+      <div class="article-body">
+        <h4>文章内容:</h4>
+        <p class="article-text">{{ stripHtmlTags(article.content) }}</p>
+      </div>
     </div>
   </div>
 </template>
@@ -43,13 +29,36 @@
 import axios from 'axios';
 
 export default {
+  props: {
+    articleId: {
+      type: [String, Number],
+      required: true
+    },
+    isLoading: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
-      article: null
+      article: {},
+      localIsLoading: false
     };
   },
-  created() {
-    this.fetchArticleDetail();
+  computed: {
+    mergedIsLoading() {
+      return this.isLoading || this.localIsLoading;
+    }
+  },
+  watch: {
+    articleId: {
+      immediate: true,
+      handler(newVal) {
+        if (newVal) {
+          this.fetchArticleDetail();
+        }
+      }
+    }
   },
   methods: {
     formatDate(dateString) {
@@ -57,95 +66,180 @@ export default {
       const date = new Date(dateString);
       return date.toLocaleString();
     },
-    formatStatus(status) {
-      const statusMap = {
-        0: '已发布',
-        1: '已删除',
-        2: '被举报'
-      };
-      return statusMap[status] || '未知状态';
+    stripHtmlTags(str) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = str;
+      return tempDiv.textContent || tempDiv.innerText || '';
     },
-    formatPermission(permission) {
-      return permission === '0' ? '公开' : '屏蔽';
-    },
-    fetchArticleDetail() {
-      const articleId = this.$route.params.articleId;
+    async fetchArticleDetail() {
+      this.localIsLoading = true;
       try {
         const token = localStorage.getItem('token');
-        axios.get(`http://localhost:5000/manager/article_detail/${articleId}`, {
-          headers: {
-            'Authorization': 'Bearer ' + token
+        const response = await axios.get(
+          `http://localhost:5000/manager/article_detail/${this.articleId}`,
+          {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
           }
-        }).then(response => {
-          if (response.data.state === 1) {
-            this.article = response.data.article;
-          } else {
-            console.error('获取文章详情失败:', response.data.message);
-          }
-        }).catch(error => {
-          console.error('请求文章详情接口失败:', error);
-        });
+        );
+        if (response.data.state === 1) {
+          this.article = response.data.article;
+        }
       } catch (error) {
         console.error('获取文章详情失败:', error);
+        alert('获取文章详情失败，请稍后再试');
+      } finally {
+        this.localIsLoading = false;
       }
+    },
+    backToList() {
+      this.$emit('back-to-list');
     }
   }
-}
+};
 </script>
 
 <style scoped>
 .article-detail-container {
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 30px;
+  background-color: #f9fafb; /* Lighter background for the whole page/section */
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  text-align: left;
+  max-width: 900px; /* Limit width for better readability */
+  margin: 40px auto; /* Center the container */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
 }
 
-.article-detail h1 {
-  font-size: 24px;
-  margin-bottom: 10px;
+h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 250px;
+  font-size: 18px;
+  color: #555;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #5ea8da;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.article-content-wrapper {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.article-title {
+  color: #1a2a3a;
+  font-size: 28px;
+  margin-bottom: 20px;
+  line-height: 1.3;
+  font-weight: 700;
+  text-align: center;
 }
 
 .article-meta {
-  display: flex;
-  margin-bottom: 15px;
-  font-size: 14px;
-  color: #666;
+  font-size: 15px;
+  color: #667788;
+  border-bottom: 1px dashed #e9ecef;
+  padding-bottom: 15px;
+  margin-bottom: 25px;
 }
 
-.article-meta span {
-  margin-right: 15px;
-}
-
-.article-content {
-  margin-bottom: 20px;
-}
-
-.article-image img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-}
-
-.article-text {
+.article-meta p {
+  margin-bottom: 8px;
   line-height: 1.6;
 }
 
-.article-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
+.article-meta p:last-child {
+  margin-bottom: 0;
 }
 
-.stat-item {
-  flex: 1;
-  min-width: 120px;
+.article-meta strong {
+  color: #4a5a6a;
+}
+
+.article-meta-inline {
+  font-size: 15px;
+  color: #667788;
+  margin-bottom: 25px; /* Adjust as needed */
+  text-align: center; /* Center the line */
+  border-bottom: 1px dashed #e9ecef; /* Keep the existing separator line */
+  padding-bottom: 15px; /* Keep existing padding */
+}
+
+.article-meta-inline span {
+  display: inline-block; /* Allows vertical alignment and spacing */
+  margin: 0 10px; /* Space between items */
+}
+
+.article-meta-inline .separator {
+  color: #cccccc; /* Lighter color for the separator */
+  font-weight: normal;
+}
+
+.article-meta-inline strong {
+  color: #4a5a6a;
+}
+
+.article-body h4 {
+  font-size: 18px;
+  color: #334455;
+  margin-bottom: 15px;
+  border-left: 4px solid #5ea8da;
+  padding-left: 10px;
+}
+
+.article-text {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #444;
+  white-space: pre-wrap; /* Preserves formatting like line breaks */
+  background-color: #fcfcfc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.back-button {
+  background-color: #5ea8da;
+  color: white;
+  border: none;
   padding: 8px 12px;
-  background-color: #f5f5f5;
-  border-radius: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  margin-top: 1px;
 }
 
-.stat-item span {
-  font-size: 14px;
+.back-button:hover {
+  background-color: #4a90c2;
 }
 </style>

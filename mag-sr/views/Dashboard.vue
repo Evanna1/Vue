@@ -6,22 +6,54 @@
         @show-managers="showSection('managers')" 
         @show-users="showSection('users')" 
         @show-articles="showSection('articles')" 
+        @show-comments="showSection('comments')"
       />
       
       <div class="dashboard-content">
         <Profile 
           v-if="currentView === 'profile'"
           :profile="profile" 
+          :isLoading="isLoading" 
           @profile-updated="loadProfile"
         />
         <UserTable 
           v-if="currentView === 'users'" 
           :users="users" 
+          :isLoading="isLoading" 
           @refresh-users="loadUsers"
-          />
+          @show-userPublishedArticles="showUserPublishedArticles"
+          @show-userComments="showUserComments"
+          @show-userLikedArticles="showUserLikedArticles"
+          @show-followers="showFollowers"
+          @show-following="showFollowing"
+        />
+        <UserComments 
+          v-if="currentView === 'userComments'" 
+          :userId="currentCommentUserId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <UserLikedArticles 
+          v-if="currentView === 'userLikedArticles'" 
+          :userId="currentLikedArticleUserId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <UserPublishedArticles 
+          v-if="currentView === 'userPublishedArticles'" 
+          :userId="currentPublishedArticleUserId"
+          :isLoading="isLoading"
+          @show-articleDetail="showArticleDetail"
+          @show-articleBrowsers="showArticleBrowsers"
+          @show-articleLikeUsers="showArticleLikeUsers"
+          @show-articleFavorites="showArticleFavorites"
+          @show-articleCommentUsers="showArticleCommentUsers"
+          @back-to-list="handleBackToList"
+        />
         <div v-if="currentView === 'managers' && isAdmin">
           <ManagerTable 
             :managers="managers" 
+            :isLoading="isLoading" 
             @delete-manager="deleteManager" 
             @add-manager="addManager"
             @refresh-managers="loadManagers" 
@@ -33,8 +65,111 @@
         <ArticleTable 
           v-if="currentView === 'articles'" 
           :articles="articles" 
+          :isLoading="isLoading" 
+          :loadArticles="loadArticles"
+          @show-articleDetail="showArticleDetail"
           @change-permission="changeArticlePermission"
-          @refresh-articles="loadArticles"
+          @show-articleBrowsers="showArticleBrowsers"
+          @show-articleLikeUsers="showArticleLikeUsers"
+          @show-articleFavorites="showArticleFavorites"
+          @show-articleCommentUsers="showArticleCommentUsers"
+          @show-user-info="showUserInfo"
+        />
+        <ArticleDetail 
+          v-if="currentView === 'articleDetail'" 
+          :articleId="currentArticleId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
+        />
+        <ArticleFavorites 
+          v-if="currentView === 'articleFavorites'" 
+          :articleId="currentFavoritesArticleId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
+        />
+        <ArticleCommentUsers 
+          v-if="currentView === 'articleCommentUsers'" 
+          :articleId="currentCommentArticleId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
+          @show-comment-parent="showCommentParent"
+        />
+        <ArticleLikeUsers 
+          v-if="currentView === 'articleLikeUsers'" 
+          :articleId="currentLikeArticleId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
+        />
+        <ArticleBrowsers 
+          v-if="currentView === 'articleBrowsers'" 
+          :articleId="currentBrowseArticleId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
+        />
+        <CommentTable 
+          v-if="currentView === 'comments'" 
+          :comments="comments" 
+          :isLoading="isLoading"
+          @load-comments="loadComments"
+          @show-comment-review="showCommentReview"
+          @show-comment-like-users="showCommentLikeUsers"
+          @show-comment-replies="showCommentReplies"
+          @show-comment-parent="showCommentParent"
+          @show-user-info="showUserInfo"
+          @show-articleDetail="showArticleDetail"
+        />
+        <CommentReview 
+          v-if="currentView === 'commentReview'" 
+          :commentId="currentCommentId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <CommentLikeUsers 
+          v-if="currentView === 'commentLikeUsers'" 
+          :commentId="currentCommentId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <CommentReplies 
+          v-if="currentView === 'commentReplies'" 
+          :commentId="currentCommentId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <CommentParent 
+          v-if="currentView === 'commentParent'" 
+          :parentId="currentParentId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
+        />
+        <!-- 粉丝列表 -->
+        <UserFollowList 
+          v-if="currentView === 'followers'" 
+          :userId="currentUserId"
+          :isFollowers="true"
+          :ownerUsername="currentUser.username"
+          :ownerId="currentUserId"
+           @back-to-list="handleBackToList"
+        />
+        <!-- 关注列表 -->
+        <UserFollowList 
+          v-if="currentView === 'following'" 
+          :userId="currentUserId"
+          :isFollowers="false"
+          :ownerUsername="currentUser.username"
+          :ownerId="currentUserId"
+           @back-to-list="handleBackToList"
+        />
+        <UserInfo 
+          v-if="currentView === 'userInfo'" 
+          :userId="currentUserId"
+          :isLoading="isLoading"
+          @back-to-list="handleBackToList"
         />
       </div>
     </div>
@@ -48,6 +183,21 @@ import Profile from '../components/Profile.vue';
 import UserTable from '../components/UserTable.vue';
 import ManagerTable from '../components/ManagerTable.vue';
 import ArticleTable from '../components/ArticleTable.vue';
+import UserFollowList from '../components/UserFollowList.vue';
+import ArticleDetail from '../components/ArticleDetail.vue';
+import ArticleFavorites from '../components/ArticleFavorites.vue';
+import ArticleCommentUsers from '../components/ArticleCommentUsers.vue';
+import ArticleLikeUsers from '../components/ArticleLikeUsers.vue';
+import ArticleBrowsers from '../components/ArticleBrowsers.vue';
+import UserComments from '../components/UserComments.vue';
+import UserLikedArticles from '../components/UserLikedArticles.vue';
+import UserPublishedArticles from '../components/UserPublishedArticles.vue';
+import CommentTable from '../components/CommentTable.vue';
+import CommentReview from '../components/CommentReview.vue';
+import CommentLikeUsers from '../components/CommentLikeUsers.vue';
+import CommentReplies from '../components/CommentReplies.vue';
+import CommentParent from '../components/CommentParent.vue';
+import UserInfo from '../components/UserInfo.vue';
 
 export default {
   components: {
@@ -55,22 +205,52 @@ export default {
     Profile,
     UserTable,
     ManagerTable,
-    ArticleTable
+    ArticleTable,
+    UserFollowList,
+    ArticleDetail,
+    ArticleFavorites,
+    ArticleCommentUsers,
+    ArticleLikeUsers,
+    ArticleBrowsers,
+    UserComments,
+    UserLikedArticles,
+    UserPublishedArticles,
+    CommentTable,
+    CommentReview,
+    CommentLikeUsers,
+    CommentReplies,
+    CommentParent,
+    UserInfo
   },
   data() {
     return {
+      isLoading: false,
       currentView: 'profile',
       profile: {},
       users: [],
       managers: [],
       articles: [],
-      isAdmin: false // 用于标识是否为超级管理员
+      comments: [], // 用于存储评论数据
+      isAdmin: false,
+      currentUserId: null,
+      currentUser: {},
+      currentArticleId: null,
+      currentFavoritesArticleId: null,
+      currentCommentArticleId: null,
+      currentLikeArticleId: null,
+      currentBrowseArticleId: null,
+      currentCommentUserId: null,
+      currentLikedArticleUserId: null,
+      currentPublishedArticleUserId: null,
+      currentCommentId: null, // 用于存储当前审核的评论 ID
+      currentParentId: null, // 用于存储当前查看的父评论 ID
+      currentUserId: null, // 用于存储当前查看的用户 ID
+      previousView: null // 用于记录来源页面
     };
   },
   created() {
-    console.log('Dashboard created');
     this.loadProfile();
-    this.checkAdminStatus(); // 检查是否为超级管理员
+    this.checkAdminStatus();
   },
   methods: {
     showSection(section) {
@@ -82,17 +262,13 @@ export default {
       this.loadDataForSection(section);
     },
     checkAdminStatus() {
-      // 获取当前登录的管理员id
       const currentMngId = localStorage.getItem('currentMngId');
       if (currentMngId) {
-        this.isAdmin = currentMngId === '1'; // 假设超级管理员的ID是字符串"1"
+        this.isAdmin = currentMngId === '1';
+      } else if (this.profile && this.profile.mng_id) {
+        this.isAdmin = this.profile.mng_id === 1;
       } else {
-        // 尝试从profile中获取ID
-        if (this.profile && this.profile.mng_id) {
-          this.isAdmin = this.profile.mng_id === 1;
-        } else {
-          this.isAdmin = false;
-        }
+        this.isAdmin = false;
       }
     },
     loadDataForSection(section) {
@@ -113,6 +289,9 @@ export default {
         case 'articles':
           this.loadArticles();
           break;
+        case 'comments':
+          this.loadComments();
+          break;
       }
     },
     async loadProfile() {
@@ -126,7 +305,6 @@ export default {
         const data = response.data;
         if (data.state === 1) {
           this.profile = data.profile;
-          // 如果profile加载成功且之前没有检查过管理员状态，再检查一次
           if (this.isAdmin === false && this.profile.mng_id) {
             this.isAdmin = this.profile.mng_id === 1;
           }
@@ -168,7 +346,7 @@ export default {
           }
         });
         const data = response.data;
-        console.log(data)
+        console.log(data);
         if (data.state === 1) {
           this.users = data.users;
         } else {
@@ -179,6 +357,7 @@ export default {
       }
     },
     async loadArticles() {
+      this.isLoading = true;
       try {
         const token = localStorage.getItem('token'); 
         const response = await axios.get('http://localhost:5000/manager/article_list', {
@@ -187,19 +366,156 @@ export default {
           }
         });
         const data = response.data;
-        console.log(data)
+        console.log(data);
         if (data.state === 1) {
-          this.articles = data.articles; // 将文章数据赋值给 this.articles
+          this.articles = data.articles;
         } else {
           console.error('获取文章列表失败:', data.message);
         }
       } catch (error) {
         console.error('请求文章列表接口失败:', error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async loadComments() {
+      this.isLoading = true;
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/manager/comment_list', {
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        const data = response.data;
+        if (data.state === 1) {
+          this.comments = data.comments_list; // 假设后端返回的评论数据在 comments_list 字段中
+        } else {
+          console.error('获取评论列表失败:', data.message);
+        }
+      } catch (error) {
+        console.error('请求评论列表接口失败:', error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async getCurrentUser(userId) {
+      try {
+        const token = localStorage.getItem('token'); 
+        const response = await axios.get(`http://localhost:5000/manager/user/${userId}`, {
+          headers: {
+            'Authorization': 'Bearer ' + token
+          }
+        });
+        const data = response.data;
+        console.log("名字");
+        console.log(data.user);
+        if (data.state === 1) {
+          this.currentUser = data.user;
+        } else {
+          console.error('获取用户信息失败:', data.message);
+        }
+      } catch (error) {
+        console.error('请求用户信息接口失败:', error);
+      }
+    },
+    async changeArticlePermission() {
+      this.currentArticle.permission = this.permissionForm.new_permission;
+    },
+    showFollowers(userId) {
+      this.currentUserId = userId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'followers';
+      this.getCurrentUser(userId);
+    },
+    showFollowing(userId) {
+      this.currentUserId = userId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'following';
+      this.getCurrentUser(userId);
+    },
+    showArticleDetail(articleId) {
+      this.currentArticleId = articleId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'articleDetail';
+    },
+    showArticleFavorites(articleId) {
+      this.currentFavoritesArticleId = articleId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'articleFavorites';
+    },
+    showArticleCommentUsers(articleId) {
+      this.currentCommentArticleId = articleId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'articleCommentUsers';
+    },
+    showArticleLikeUsers(articleId) {
+      this.currentLikeArticleId = articleId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'articleLikeUsers';
+    },
+    showArticleBrowsers(articleId) {
+      this.currentBrowseArticleId = articleId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'articleBrowsers';
+    },
+    showUserComments(userId) {
+      this.currentCommentUserId = userId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'userComments';
+    },
+    showUserLikedArticles(userId) {
+      this.currentLikedArticleUserId = userId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'userLikedArticles';
+    },
+    showUserPublishedArticles(userId) {
+      this.currentPublishedArticleUserId = userId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'userPublishedArticles';
+    },
+    showCommentReview(commentId) {
+      this.currentCommentId = commentId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'commentReview';
+    },
+    showCommentLikeUsers(commentId) {
+      this.currentCommentId = commentId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'commentLikeUsers';
+    },
+    showCommentReplies(commentId) {
+      this.currentCommentId = commentId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'commentReplies';
+    },
+    showCommentParent(parentId) {
+      this.currentParentId = parentId;
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'commentParent';
+    },
+    showUserInfo(userId) {
+      this.currentUserId = userId;
+      console.log('Received userId:', userId); // 确认 userId 是否正确传递
+      this.previousView = this.currentView; // 记录来源页面
+      this.currentView = 'userInfo';
+    },
+    handleBackToList() {
+      if (this.previousView) {
+        this.currentView = this.previousView;
+        this.previousView = null;
+        if (this.currentView === 'comments') {
+          this.loadComments();
+        }
+      } else {
+        // 如果没有记录来源页面，默认返回到首页或其他页面
+        this.currentView = 'profile';
       }
     }
   }
 }
 </script>
+
 <style scoped>
 .dashboard-wrapper {
   position: fixed;

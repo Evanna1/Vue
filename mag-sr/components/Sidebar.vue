@@ -6,6 +6,7 @@
       <li @click="$emit('show-managers')">管理员管理</li>
       <li @click="$emit('show-users')">用户管理</li>
       <li @click="$emit('show-articles')">文章管理</li>
+      <li @click="$emit('show-comments')">评论管理</li> 
     </ul>
   </div>
 </template>

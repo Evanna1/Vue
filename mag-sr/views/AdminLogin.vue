@@ -71,74 +71,81 @@ body, html {
   width: 100vw;
   height: 100vh;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(to right, #74ebd5, #acb6e5);
-}
-
-.login-wrapper {
+  background: linear-gradient(135deg, #e0f2f7 0%, #b2ebf2 50%, #4dd0e1 100%); /* 接近您提供的蓝色系的渐变 */
   display: flex;
   justify-content: center;
   align-items: center;
+  overflow: hidden;
+}
+
+.login-wrapper {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  padding: 40px;
   width: 90vw;
-  height: 100vh;
-  box-sizing: border-box;
+  max-width: 420px;
+  text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .login-container {
-  background-color: #ffffff;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-  width: 340px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 
 .login-container h2 {
-  margin-bottom: 25px;
-  color: #333;
+  color: #5ea8da; /* 您提供的蓝色 */
+  margin-bottom: 35px;
+  font-size: 2.2em;
+  font-weight: 500;
 }
 
 .form-group {
-  margin-bottom: 18px;
-  width: 100%;
+  margin-bottom: 25px;
 }
 
 input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
+  width: calc(100% - 24px);
+  padding: 14px;
+  border: 1px solid #80deea; /* 接近的浅蓝色边框 */
+  border-radius: 8px;
+  font-size: 16px;
   transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-input:focus {
-  border-color: #4CAF50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  box-sizing: border-box;
   outline: none;
 }
 
+input:focus {
+  border-color: #5ea8da; /* 您提供的蓝色作为焦点颜色 */
+  box-shadow: 0 0 8px rgba(94, 168, 218, 0.4); /* 蓝色焦点阴影 */
+}
+
 button {
-  width: 100%;
-  padding: 12px;
-  font-size: 16px;
-  background-color: #4CAF50;
-  color: #fff;
+  padding: 16px;
+  font-size: 18px;
+  background-color: #5ea8da; /* 您提供的蓝色作为按钮背景 */
+  color: #ffffff;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 button:hover {
-  background-color: #43a047;
-  transform: scale(1.03);
+  background-color: #4c8bb7; /* 稍微深一点的 hover 效果 */
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
 }
 
 .error-message {
-  color: #e53935;
-  margin-top: 15px;
+  color: #f44336;
+  margin-top: 25px;
   font-size: 14px;
   text-align: center;
 }

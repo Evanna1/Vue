@@ -1,6 +1,6 @@
 <template>
-  <router-link to="/" class="logo-absolute">NexTecht</router-link>
   <div class="post-detail-container">
+    <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
     <div class="card title-card">
       <h1 class="post-title">{{ post.title }}</h1>
       <div class="post-meta" v-if="post.author">
@@ -313,6 +313,7 @@ import { ref, onMounted, nextTick, computed, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import { format } from 'date-fns'
+import HeaderBar from '@/components/HeaderBar.vue'
 // 导入 Wangeditor 的组件和样式
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue' // 如果你用的是 Vue 版本的封装
 import '@wangeditor/editor/dist/css/style.css'

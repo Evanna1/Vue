@@ -3,6 +3,10 @@
     <router-link to="/" class="logo">NexTecht</router-link>
 
     <div class="center-group">
+      <span class="center-text">Explore the Future：All visitors to the website</span>
+      <router-link to="/" class="home-icon">
+        <i class="fa fa-home"></i>
+      </router-link>
       <router-link
         v-if="isLoggedIn"
         to="/create"
@@ -33,52 +37,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
-const router = useRouter()
-const isLoggedIn = ref(false)
-const avatarUrl = ref('/default-avatar.png')
-const showDropdown = ref(false)
-let hideTimer: number | null = null
+const router = useRouter();
+const isLoggedIn = ref(false);
+const avatarUrl = ref('/default-avatar.png');
+const showDropdown = ref(false);
+let hideTimer: number | null = null;
 
 onMounted(() => {
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem('token');
   if (token) {
-    isLoggedIn.value = true
-    avatarUrl.value = localStorage.getItem('avatar') || '/default-avatar.png'
+    isLoggedIn.value = true;
+    avatarUrl.value = localStorage.getItem('avatar') || '/default-avatar.png';
   }
-})
+});
 
 function goLogin() {
-  router.push('/login')
+  router.push('/login');
 }
 
 function logout() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('avatar')
-  localStorage.removeItem('user_id')
-  isLoggedIn.value = false
-  router.push('/')
+  localStorage.removeItem('token');
+  localStorage.removeItem('avatar');
+  localStorage.removeItem('user_id');
+  isLoggedIn.value = false;
+  router.push('/');
 }
 
 function onMouseEnter() {
   if (hideTimer) {
-    clearTimeout(hideTimer)
-    hideTimer = null
+    clearTimeout(hideTimer);
+    hideTimer = null;
   }
-  showDropdown.value = true
+  showDropdown.value = true;
 }
 
 function onMouseLeave() {
   hideTimer = window.setTimeout(() => {
-    showDropdown.value = false
-  }, 200)
+    showDropdown.value = false;
+  }, 200);
 }
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Monofett&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pacifico&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lobster&display=swap');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css'); /* 引入 Font Awesome 5 */
 
 .header-bar {
   display: flex;
@@ -107,8 +117,38 @@ function onMouseLeave() {
   display: flex;
   align-items: center;
   flex: 1;
-  justify-content: flex-end; /* 保持靠右对齐 */
+  justify-content: flex-end; /* 先靠右对齐，方便定位 */
   gap: 20px;
+}
+
+.home-icon {
+  color: #0077cc; /* 将颜色设置为和 logo 一样的颜色 */
+  font-size: 20px;
+  margin-left: px; /* 保持原来的右边距 */
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.home-icon:hover {
+  color: #0056b3; /* 可以设置鼠标悬停时的颜色 */
+}
+
+.home-icon i {
+  vertical-align: middle;
+}
+
+.center-text {
+  font-family: 'Lobster', cursive; /* 极其抽象艺术的字体 */
+  font-size: 22px; /* 调整字号以适应字体特性 */
+  color: #004c6d; /* 深海蓝 */
+  white-space: nowrap; /* 防止文字换行 */
+  /* 调整位置，使其在中间偏右 */
+  margin-left: auto; /* 将左侧剩余空间推给它 */
+  margin-right: 160px; /* 向右移动，根据需要调整 */
+  letter-spacing: 2px; /* 增加字母间距增强可读性 */
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.15); /* 添加阴影提升视觉效果 */
+  transform: perspective(500px) rotateX(5deg); /* 添加轻微的3D效果 */
 }
 
 .write-btn {
@@ -130,7 +170,7 @@ function onMouseLeave() {
 }
 
 .shifted-left {
-  margin-right: 150px; /* 调整这个值来控制 "+创作" 左移的距离 */
+  margin-right: 80px; /* 调整这个值来控制 "+创作" 相对于右侧的距离 */
 }
 
 .action-group button {

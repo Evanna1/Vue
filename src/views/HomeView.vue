@@ -1,5 +1,10 @@
 <template>
   <div class="home-container">
+    <!-- 左侧装饰元素 -->
+    <div class="side-decoration left-decoration"></div>
+    <!-- 右侧装饰元素 -->
+    <div class="side-decoration right-decoration"></div>
+
     <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
     <div class="search-bar">
       <input
@@ -12,13 +17,13 @@
     </div>
     <div class="tabs">
       <button :class="{ active: activeTab === 'recommend' }" @click="setActiveTab('recommend')">
-        推荐
+        <i class="fa fa-thumbs-up"></i> 推荐
       </button>
       <button :class="{ active: activeTab === 'follow' }" @click="setActiveTab('follow')">
-        关注
+        <i class="fa fa-heart"></i> 关注
       </button>
       <button :class="{ active: activeTab === 'hot' }" @click="setActiveTab('hot')">
-        热榜
+        <i class="fa fa-fire"></i> 热榜
       </button>
     </div>
 
@@ -241,13 +246,34 @@ function searchByTag(tag: string) {
 </script>
 
 <style scoped>
-/* 美化后的样式 */
+/* 引入 Font Awesome 样式，你需要确保你的项目已经包含了 Font Awesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css');
+
 .home-container {
   padding: 0;
   background: #f9f9f9;
   min-height: 100vh;
   padding-top: 60px; /* 确保内容不被固定的 HeaderBar 遮挡 */
   font-family: Arial, sans-serif;
+  position: relative; /* 用于定位左右装饰元素 */
+}
+
+/* 左右装饰元素的样式 */
+.side-decoration {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100px; /* 装饰元素的宽度 */
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.8));
+  pointer-events: none; /* 防止装饰元素影响鼠标事件 */
+}
+
+.left-decoration {
+  left: 0;
+}
+
+.right-decoration {
+  right: 0;
 }
 
 .search-bar {
@@ -313,6 +339,8 @@ function searchByTag(tag: string) {
   font-size: 16px;
   color: #495057;
   transition: background-color 0.2s ease, color 0.2s ease;
+  display: flex; /* 使图标和文字对齐 */
+  align-items: center; /* 垂直居中 */
 }
 
 .tabs button:hover,
@@ -321,6 +349,37 @@ function searchByTag(tag: string) {
   color: white;
   font-weight: bold;
 }
+
+/* Font Awesome 图标 */
+.tabs button i.fa {
+  margin-right: 8px;
+  font-size: 18px; /* 调整图标大小 */
+  vertical-align: middle; /* 使图标与文字垂直居中 */
+}
+
+/* 为不同的 Tab 图标设置颜色 */
+.tabs button:nth-child(1) i.fa { /* 推荐图标 */
+  color: #28a745; /* 绿色 */
+}
+
+.tabs button:nth-child(2) i.fa { /* 关注图标 */
+  color: #dc3545; /* 红色 */
+}
+
+.tabs button:nth-child(3) i.fa { /* 热榜图标 */
+  color: #ffc107; /* 黄色 */
+}
+
+.tabs button.active:nth-child(1) i.fa,
+.tabs button.active:nth-child(2) i.fa,
+.tabs button.active:nth-child(3) i.fa {
+  color: white; /* 激活状态时图标颜色为白色 */
+}
+
+/* Font Awesome 类名 */
+.fa-thumbs-up::before { content: "\f164"; } /* 推荐 */
+.fa-heart::before { content: "\f004"; } /* 关注 - 更换为心形图标 */
+.fa-fire::before { content: "\f06d"; } /* 热榜 */
 
 .post-list {
   max-width: 800px;
@@ -373,13 +432,13 @@ function searchByTag(tag: string) {
 }
 
 .tag-item {
-  background-color: #f0f0f0;
-  color: #555;
-  padding: 4px 10px;
-  border-radius: 15px;
+  background-color: #e0f7fa;
+  color: #00acc1;
+  padding: 5px 10px;
+  border-radius: 5px;
   font-size: 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .tag-item:hover {
