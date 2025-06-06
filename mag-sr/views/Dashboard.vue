@@ -26,18 +26,26 @@
           @show-userLikedArticles="showUserLikedArticles"
           @show-followers="showFollowers"
           @show-following="showFollowing"
+          @show-user-info="showUserInfo"
         />
         <UserComments 
           v-if="currentView === 'userComments'" 
           :userId="currentCommentUserId"
           :isLoading="isLoading"
           @back-to-list="handleBackToList"
+          @show-comment-review="showCommentReview"
+          @show-comment-like-users="showCommentLikeUsers"
+          @show-comment-replies="showCommentReplies"
+          @show-comment-detail="showCommentDeatail"
+          @show-user-info="showUserInfo"
+          @show-articleDetail="showArticleDetail"
         />
         <UserLikedArticles 
           v-if="currentView === 'userLikedArticles'" 
           :userId="currentLikedArticleUserId"
           :isLoading="isLoading"
           @back-to-list="handleBackToList"
+          @show-articleDetail="showArticleDetail"
         />
         <UserPublishedArticles 
           v-if="currentView === 'userPublishedArticles'" 
@@ -95,7 +103,7 @@
           :isLoading="isLoading"
           @back-to-list="handleBackToList"
           @show-user-info="showUserInfo"
-          @show-comment-parent="showCommentParent"
+          @show-comment-detail="showCommentDeatail"
         />
         <ArticleLikeUsers 
           v-if="currentView === 'articleLikeUsers'" 
@@ -119,7 +127,7 @@
           @show-comment-review="showCommentReview"
           @show-comment-like-users="showCommentLikeUsers"
           @show-comment-replies="showCommentReplies"
-          @show-comment-parent="showCommentParent"
+          @show-comment-detail="showCommentDeatail"
           @show-user-info="showUserInfo"
           @show-articleDetail="showArticleDetail"
         />
@@ -127,6 +135,8 @@
           v-if="currentView === 'commentReview'" 
           :commentId="currentCommentId"
           :isLoading="isLoading"
+          @show-comments="showSection('comments')"
+          @show-comment-review="showCommentReview"
           @back-to-list="handleBackToList"
         />
         <CommentLikeUsers 
@@ -134,17 +144,27 @@
           :commentId="currentCommentId"
           :isLoading="isLoading"
           @back-to-list="handleBackToList"
+          @show-user-info="showUserInfo"
         />
         <CommentReplies 
           v-if="currentView === 'commentReplies'" 
           :commentId="currentCommentId"
           :isLoading="isLoading"
+          @show-comment-review="showCommentReview"
+          @show-comment-like-users="showCommentLikeUsers"
+          @show-comment-replies="showCommentReplies"
+          @show-comment-detail="showCommentDeatail"
+          @show-user-info="showUserInfo"
           @back-to-list="handleBackToList"
         />
-        <CommentParent 
-          v-if="currentView === 'commentParent'" 
-          :parentId="currentParentId"
+        <CommentDeatail 
+          v-if="currentView === 'CommentDeatail'" 
+          :parentId="currentCommentId_dataild"
           :isLoading="isLoading"
+          @show-comment-like-users="showCommentLikeUsers"
+          @show-comment-replies="showCommentReplies"
+          @show-comment-detail="showCommentDeatail"
+          @show-user-info="showUserInfo"
           @back-to-list="handleBackToList"
         />
         <!-- 粉丝列表 -->
@@ -155,6 +175,7 @@
           :ownerUsername="currentUser.username"
           :ownerId="currentUserId"
            @back-to-list="handleBackToList"
+           @show-user-info="showUserInfo"
         />
         <!-- 关注列表 -->
         <UserFollowList 
@@ -164,11 +185,17 @@
           :ownerUsername="currentUser.username"
           :ownerId="currentUserId"
            @back-to-list="handleBackToList"
+           @show-user-info="showUserInfo"
         />
         <UserInfo 
           v-if="currentView === 'userInfo'" 
           :userId="currentUserId"
           :isLoading="isLoading"
+          @show-userPublishedArticles="showUserPublishedArticles"
+          @show-userComments="showUserComments"
+          @show-userLikedArticles="showUserLikedArticles"
+          @show-followers="showFollowers"
+          @show-following="showFollowing"
           @back-to-list="handleBackToList"
         />
       </div>
@@ -196,7 +223,7 @@ import CommentTable from '../components/CommentTable.vue';
 import CommentReview from '../components/CommentReview.vue';
 import CommentLikeUsers from '../components/CommentLikeUsers.vue';
 import CommentReplies from '../components/CommentReplies.vue';
-import CommentParent from '../components/CommentParent.vue';
+import CommentDeatail from '../components/CommentDetail.vue';
 import UserInfo from '../components/UserInfo.vue';
 
 export default {
@@ -219,7 +246,7 @@ export default {
     CommentReview,
     CommentLikeUsers,
     CommentReplies,
-    CommentParent,
+    CommentDeatail,
     UserInfo
   },
   data() {
@@ -243,7 +270,7 @@ export default {
       currentLikedArticleUserId: null,
       currentPublishedArticleUserId: null,
       currentCommentId: null, // 用于存储当前审核的评论 ID
-      currentParentId: null, // 用于存储当前查看的父评论 ID
+      currentCommentId_dataild: null, // 用于存储当前查看的评论 ID
       currentUserId: null, // 用于存储当前查看的用户 ID
       previousView: null // 用于记录来源页面
     };
@@ -489,10 +516,10 @@ export default {
       this.previousView = this.currentView; // 记录来源页面
       this.currentView = 'commentReplies';
     },
-    showCommentParent(parentId) {
-      this.currentParentId = parentId;
+    showCommentDeatail(commentId) {
+      this.currentCommentId_dataild = commentId;
       this.previousView = this.currentView; // 记录来源页面
-      this.currentView = 'commentParent';
+      this.currentView = 'CommentDeatail';
     },
     showUserInfo(userId) {
       this.currentUserId = userId;
@@ -504,9 +531,6 @@ export default {
       if (this.previousView) {
         this.currentView = this.previousView;
         this.previousView = null;
-        if (this.currentView === 'comments') {
-          this.loadComments();
-        }
       } else {
         // 如果没有记录来源页面，默认返回到首页或其他页面
         this.currentView = 'profile';

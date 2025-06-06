@@ -15,9 +15,7 @@
             <option value="id">评论ID</option>
             <option value="author">作者</option>
             <option value="create_time">创建时间</option>
-            <option value="update_time">更新时间</option>
             <option value="status">状态</option>
-            <option value="is_approved">审核状态</option>
             <option value="article_id">文章ID</option>
             <option value="parent_id">父评论ID</option>
           </select>
@@ -37,9 +35,7 @@
             <th>评论ID</th>
             <th>作者</th>
             <th>创建时间</th>
-            <th>更新时间</th>
             <th>状态</th>
-            <th>审核状态</th>
             <th>文章ID</th>
             <th>父评论ID</th>
             <th>深度</th>
@@ -55,18 +51,14 @@
               <a @click="showUserInfo(comment.user.id)" class="clickable">{{ comment.user.username }}</a>
             </td>
             <td>{{ formatDate(comment.create_time) }}</td>
-            <td>{{ formatDate(comment.update_time) }}</td>
             <td>
               <span :class="['status-badge', formatStatusClass(comment.status)]">{{ formatStatus(comment.status) }}</span>
-            </td>
-            <td>
-              <span :class="['status-badge', formatApprovalStatusClass(comment.is_approved)]">{{ formatApprovalStatus(comment.is_approved) }}</span>
             </td>
             <td>
               <a @click="showArticleDetail(comment.article_id)" class="clickable">{{ comment.article_id }}</a>
             </td>
             <td>
-              <a v-if="comment.parent_id" @click="showCommentParent(comment.parent_id)" class="clickable">
+              <a v-if="comment.parent_id" @click="showCommentDeatail(comment.parent_id)">
                 {{ comment.parent_id }}
               </a>
               <span v-else>无</span>
@@ -145,22 +137,6 @@ export default {
         default: return '';
       }
     },
-    formatApprovalStatus(status) {
-      const statusMap = {
-        0: '待审核',
-        1: '已通过',
-        2: '未通过'
-      };
-      return statusMap[status] || '未知状态';
-    },
-    formatApprovalStatusClass(status) {
-      switch (status) {
-        case 0: return 'pending'; // 新增 'pending' 类
-        case 1: return 'normal';
-        case 2: return 'blocked';
-        default: return '';
-      }
-    },
     async approveComment(commentId) {
       try {
         const token = localStorage.getItem('token');
@@ -181,6 +157,9 @@ export default {
       }
     },
     async deleteComment(commentId) {
+      if (!confirm('确定要删除这条回复吗？此操作不可逆。')) {
+        return;
+      }
       try {
         const token = localStorage.getItem('token');
         await axios.post(
@@ -208,8 +187,8 @@ export default {
     showCommentReplies(commentId) {
       this.$emit('show-comment-replies', commentId);
     },
-    showCommentParent(parentId) {
-      this.$emit('show-comment-parent', parentId);
+    showCommentDeatail(commentId) {
+      this.$emit('show-comment-detail', commentId);
     },
     showUserInfo(userId) {
       this.$emit('show-user-info', userId);
@@ -222,7 +201,6 @@ export default {
         this.filteredComments = this.comments;
         return;
       }
-
       this.filteredComments = this.comments.filter(comment => {
         const keyword = this.searchKeyword.toLowerCase();
         if (!this.searchField) {
@@ -231,9 +209,7 @@ export default {
             comment.id.toString().includes(keyword) ||
             (comment.user.username && comment.user.username.toLowerCase().includes(keyword)) ||
             this.formatDate(comment.create_time).includes(keyword) ||
-            this.formatDate(comment.update_time).includes(keyword) ||
             this.formatStatus(comment.status).toLowerCase().includes(keyword) ||
-            this.formatApprovalStatus(comment.is_approved).toLowerCase().includes(keyword) ||
             comment.article_id.toString().includes(keyword) ||
             (comment.parent_id && comment.parent_id.toString().includes(keyword))
           );
@@ -254,9 +230,6 @@ export default {
               break;
             case 'status':
               value = this.formatStatus(comment.status);
-              break;
-            case 'is_approved':
-              value = this.formatApprovalStatus(comment.is_approved);
               break;
             case 'article_id':
               value = comment.article_id;

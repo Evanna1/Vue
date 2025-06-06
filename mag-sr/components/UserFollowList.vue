@@ -1,15 +1,9 @@
 <template>
   <div class="user-list-container">
+    <button @click="backToList" class="back-button">返回</button>
     <div class="header-container">
-      <h2 class="list-title">{{ isFollowers ? '粉丝列表' : '关注列表' }}</h2>
-      <button class="back-button" @click="backToList">
-        <svg viewBox="0 0 24 24" fill="currentColor" class="back-icon">
-          <path fill-rule="evenodd" d="M15.79 6.70a1 1 0 010 1.41l-5.58 5.59a1 1 0 01-1.42 0L6.21 8.11a1 1 0 111.42-1.42l4.87 4.88 5.58-5.59a1 1 0 011.42 0z" clip-rule="evenodd" />
-        </svg>
-        返回
-      </button>
+      <h2 class="list-title">用户 {{ userInfo || '未知用户' }} (ID: {{ userId }})的{{ isFollowers ? '粉丝列表' : '关注列表' }}</h2>
     </div>
-
     <div class="filter-container">
       <div class="search-box">
         <svg viewBox="0 0 20 20" fill="currentColor" class="search-icon">
@@ -42,7 +36,6 @@
           <option value="">全部</option>
           <option value="男">男</option>
           <option value="女">女</option>
-          <option value="保密">保密</option>
         </select>
       </div>
 
@@ -86,8 +79,12 @@
         </thead>
         <tbody>
           <tr v-for="(user, index) in filteredUserList" :key="user.id" :class="{ 'first-row': index === 0 }">
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
+            <td>
+              <a @click="showUserInfo(user.id)" class="clickable">{{ user.id }}</a>
+            </td>
+            <td>
+              <a @click="showUserInfo(user.id)" class="clickable">{{ user.username }}</a>
+            </td>
             <td>{{ user.nickname }}</td>
             <td>
               <div class="avatar-container">
@@ -134,11 +131,11 @@ export default {
       type: Boolean,
       required: true
     },
-    ownerUsername: {
+    ownerUsername: { // 这个 prop 在你的 template 和 script 中未使用，可以考虑移除或根据需求使用
       type: String,
       required: true
     },
-    ownerId: {
+    ownerId: { // 这个 prop 在你的 template 和 script 中未使用，可以考虑移除或根据需求使用
       type: Number,
       required: true
     }
@@ -152,7 +149,8 @@ export default {
       statusFilter: '',
       genderFilter: '',
       onlineFilter: '',
-      relationFilter: ''
+      relationFilter: '',
+      userInfo: { nickname: '未知用户' }, // 初始值，确保在获取到数据前有默认显示
     };
   },
   computed: {
@@ -169,6 +167,7 @@ export default {
         // 下拉框的过滤
         const statusMatch = this.statusFilter === '' || user.u_status.toString() === this.statusFilter;
         const genderMatch = this.genderFilter === '' || user.gender === this.genderFilter;
+        // 注意：布尔值与字符串 'true'/'false' 的比较
         const onlineMatch = this.onlineFilter === '' || user.is_online.toString() === this.onlineFilter;
         const relationMatch = this.relationFilter === '' || this.relationMap[user.id] === this.relationFilter;
 
@@ -176,15 +175,68 @@ export default {
       });
     }
   },
-  async created() {
-    await this.fetchUserList();
-    await this.fetchRelations();
+  // 在 `created` 钩子中只做初始化操作，数据加载由 `watch` 控制
+  created() {
+    this.fetchUserInfo(); // 用户信息在组件创建时获取一次即可
+  },
+  watch: {
+    // 监听 isFollowers 变化，决定加载粉丝还是关注列表
+    isFollowers: {
+      handler() {
+        this.resetAndFetchData();
+      },
+      immediate: true, // 立即执行一次，确保组件首次渲染时根据 isFollowers 的初始值加载数据
+    },
+    // 监听 userId 变化，如果用户 ID 改变，也需要重新加载数据和用户信息
+    userId: {
+      handler() {
+        this.fetchUserInfo(); // 用户 ID 改变时重新获取用户信息
+        this.resetAndFetchData();
+      },
+      immediate: true, // 立即执行一次，确保组件首次渲染时根据 userId 的初始值加载数据
+    }
   },
   methods: {
     formatDate(dateString) {
       if (!dateString) return '无';
       const date = new Date(dateString);
       return date.toLocaleString();
+    },
+    // 封装重置数据并获取列表和关系的逻辑
+    async resetAndFetchData() {
+      this.userList = []; // 清空当前列表数据
+      this.relationMap = {}; // 清空关系映射
+      // 重置筛选条件，可选，看你的业务需求是否每次切换列表都重置筛选
+      this.searchKeyword = '';
+      this.statusFilter = '';
+      this.genderFilter = '';
+      this.onlineFilter = '';
+      this.relationFilter = '';
+
+      await this.fetchUserList();
+      await this.fetchRelations();
+    },
+    async fetchUserInfo() {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(
+          `http://localhost:5000/manager/user/${this.userId}`,
+          {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          }
+        );
+        if (response.data.state === 1) {
+          this.userInfo = response.data.user;
+        } else {
+          console.error('获取用户信息失败:', response.data.message);
+          this.userInfo = { nickname: '未知用户' };
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error);
+        this.userInfo = { nickname: '未知用户' };
+      }
     },
     async fetchUserList() {
       try {
@@ -198,6 +250,7 @@ export default {
           }
         });
         if (response.data.state === 1) {
+          // 根据 isFollowers 属性来正确赋值 userList
           this.userList = this.isFollowers ? response.data.followers : response.data.following;
         } else {
           alert('获取用户列表失败: ' + response.data.message);
@@ -211,15 +264,17 @@ export default {
       try {
         const token = localStorage.getItem('token');
         const relations = {};
+        // 遍历当前 userList 中的用户，获取他们的关系
         for (const user of this.userList) {
           const response = await axios.get(
-            `http://localhost:5000/friends/${user.id}`,
+            `http://localhost:5000/friends/${user.id}`, // 这里应该是当前登录用户与列表中用户的关系，如果 API 是这样设计的
             {
               headers: {
                 'Authorization': 'Bearer ' + token
               }
             }
           );
+          // 根据 API 返回判断关系，假设 is_mutual 和 is_following 是从当前登录用户视角判断的
           relations[user.id] = response.data.is_mutual ? '互相关注' : (response.data.is_following ? '已关注' : '未关注');
         }
         this.relationMap = relations;
@@ -228,8 +283,11 @@ export default {
         alert('获取用户关系失败，请稍后再试');
       }
     },
+    showUserInfo(userId) {
+      this.$emit('show-user-info', userId);
+    },
     backToList() {
-    this.$emit('back-to-list');
+      this.$emit('back-to-list');
     },
   }
 }
@@ -260,27 +318,22 @@ export default {
 }
 
 .back-button {
-  background-color: #fff;
-  border: 1px solid #ddd;
+  background-color: #5ea8da;
+  color: white;
+  border: none;
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  color: #555;
-  display: flex;
+  transition: background-color 0.3s ease;
+  margin-bottom: 20px;
+  display: inline-flex;
   align-items: center;
-  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .back-button:hover {
-  background-color: #eee;
-  border-color: #ccc;
-}
-
-.back-icon {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
+  background-color: #4a90c2;
 }
 
 .filter-container {
@@ -291,20 +344,28 @@ export default {
   flex-wrap: wrap;
 }
 
+/* 移除 .search-filter-container 样式，因为它在 template 中不存在 */
+/* .search-filter-container {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  position: absolute;
+  top: 140px;
+  right: 24px;
+} */
+
 .search-box {
   display: flex;
   align-items: center;
   border: 1px solid #ddd;
   border-radius: 6px;
   padding: 6px 12px;
-  flex-grow: 1;
-  max-width: 300px;
   background-color: #fff;
 }
 
 .search-icon {
-  width: 20px; /* 增大图标宽度 */
-  height: 20px; /* 增大图标高度 */
+  width: 18px;
+  height: 18px;
   margin-right: 8px;
   color: #888;
 }
@@ -461,4 +522,10 @@ export default {
   text-align: center;
   color: #999;
 }
+
+.user-table td a {
+  color: #5ea8da; /* 浅蓝色 */
+  text-decoration: none;
+}
+
 </style>

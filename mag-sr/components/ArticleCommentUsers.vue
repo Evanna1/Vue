@@ -2,7 +2,7 @@
   <div class="article-comment-users">
     <button @click="backToList" class="back-button">返回</button>
     <div class="header-container">
-      <h3 class="comments-title">文章 {{ articleId }} 的评论者</h3>
+      <h2 class="comments-title">文章(ID:{{ this.articleId }})的评论用户</h2>
     </div>
     <div class="search-filter-container">
       <div class="search-box">
@@ -50,7 +50,7 @@
               <td>{{ commentUser.user_info.nickname }}</td>
               <td>{{ commentUser.user_info.avatar }}</td>
               <td>
-                <a @click="showCommentParent(commentUser.comment_id)">{{ commentUser.comment_id }}</a>
+                <a @click="showCommentDeatail(commentUser.comment_id)">{{ commentUser.comment_id }}</a>
               </td>
               <td>{{ commentUser.comment_content }}</td>
               <td>{{ formatDate(commentUser.comment_create_time) }}</td>
@@ -175,8 +175,8 @@ export default {
     showUserInfo(userId) {
       this.$emit('show-user-info', userId);
     },
-    showCommentParent(parentId) {
-      this.$emit('show-comment-parent', parentId);
+    showCommentDeatail(commentId) {
+      this.$emit('show-comment-detail', commentId);
     },
     backToList() {
       this.$emit('back-to-list');

@@ -7,11 +7,7 @@
       <router-link to="/" class="home-icon">
         <i class="fa fa-home"></i>
       </router-link>
-      <router-link
-        v-if="isLoggedIn"
-        to="/create"
-        class="write-btn shifted-left"
-      >+创作</router-link>
+      <router-link v-if="isLoggedIn" to="/create" class="write-btn shifted-left">+创作</router-link>
     </div>
 
     <div class="header-actions shifted-left-actions">
@@ -37,47 +33,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
-const isLoggedIn = ref(false);
-const avatarUrl = ref('/default-avatar.png');
-const showDropdown = ref(false);
-let hideTimer: number | null = null;
+const router = useRouter()
+const isLoggedIn = ref(false)
+const avatarUrl = ref('/default-avatar.png')
+const showDropdown = ref(false)
+let hideTimer: number | null = null
 
 onMounted(() => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token')
   if (token) {
-    isLoggedIn.value = true;
-    avatarUrl.value = localStorage.getItem('avatar') || '/default-avatar.png';
+    isLoggedIn.value = true
+    avatarUrl.value = localStorage.getItem('avatar') || '/default-avatar.png'
   }
-});
+})
 
 function goLogin() {
-  router.push('/login');
+  router.push('/login')
 }
 
 function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('avatar');
-  localStorage.removeItem('user_id');
-  isLoggedIn.value = false;
-  router.push('/');
+  localStorage.removeItem('token')
+  localStorage.removeItem('avatar')
+  localStorage.removeItem('user_id')
+  isLoggedIn.value = false
+  router.push('/')
 }
 
 function onMouseEnter() {
   if (hideTimer) {
-    clearTimeout(hideTimer);
-    hideTimer = null;
+    clearTimeout(hideTimer)
+    hideTimer = null
   }
-  showDropdown.value = true;
+  showDropdown.value = true
 }
 
 function onMouseLeave() {
   hideTimer = window.setTimeout(() => {
-    showDropdown.value = false;
-  }, 200);
+    showDropdown.value = false
+  }, 200)
 }
 </script>
 
@@ -139,16 +135,18 @@ function onMouseLeave() {
 }
 
 .center-text {
-  font-family: 'Lobster', cursive; /* 极其抽象艺术的字体 */
-  font-size: 22px; /* 调整字号以适应字体特性 */
-  color: #004c6d; /* 深海蓝 */
-  white-space: nowrap; /* 防止文字换行 */
-  /* 调整位置，使其在中间偏右 */
-  margin-left: auto; /* 将左侧剩余空间推给它 */
-  margin-right: 160px; /* 向右移动，根据需要调整 */
-  letter-spacing: 2px; /* 增加字母间距增强可读性 */
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.15); /* 添加阴影提升视觉效果 */
-  transform: perspective(500px) rotateX(5deg); /* 添加轻微的3D效果 */
+  font-family: 'Lobster', cursive;
+  font-size: 26px;
+  color: #004c6d;
+  white-space: nowrap;
+  letter-spacing: 2px;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+  transform: perspective(500px) rotateX(5deg);
+
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  text-align: center;
 }
 
 .write-btn {

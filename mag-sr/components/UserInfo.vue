@@ -51,23 +51,23 @@
       <div class="profile-details-section">
         <h3>用户活动统计</h3>
         <div class="data-stats-grid">
-          <div class="stat-item">
+          <div @click="showUserLikedArticles(user.id)"class="stat-item">
             <span class="stat-label">发布文章数</span>
             <span class="stat-value">{{ user.article_count }}</span>
           </div>
-          <div class="stat-item">
+          <div @click="showUserComments(user.id)"class="stat-item">
             <span class="stat-label">发布评论数</span>
             <span class="stat-value">{{ user.comment_count }}</span>
           </div>
-          <div class="stat-item">
+          <div @click="showUserLikedArticles(user.id)"class="stat-item">
             <span class="stat-label">点赞数</span>
             <span class="stat-value">{{ user.like_count }}</span>
           </div>
-          <div class="stat-item">
+          <div @click="showFollowers(user.id)"class="stat-item">
             <span class="stat-label">粉丝数</span>
             <span class="stat-value">{{ user.followers_count }}</span>
           </div>
-          <div class="stat-item">
+          <div @click="showFollowing(user.id)"class="stat-item">
             <span class="stat-label">关注数</span>
             <span class="stat-value">{{ user.followings_count }}</span>
           </div>
@@ -146,6 +146,21 @@ export default {
       } finally {
         this.localIsLoading = false;
       }
+    },
+    showFollowers(userId) {
+      this.$emit('show-followers', userId);
+    },
+    showFollowing(userId) {
+      this.$emit('show-following', userId);
+    },
+    showUserComments(userId) {
+      this.$emit('show-userComments', userId);
+    },
+    showUserLikedArticles(userId) {
+      this.$emit('show-userLikedArticles', userId);
+    },
+    showUserPublishedArticles(userId) {
+      this.$emit('show-userPublishedArticles', userId);
     },
     backToList() {
       this.$emit('back-to-list');

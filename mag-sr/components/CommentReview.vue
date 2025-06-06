@@ -1,7 +1,7 @@
 <template>
   <div class="comment-review-wrapper">
     <button @click="backToList" class="back-button">返回</button>
-    <h2 class="page-title">评论审核</h2>
+    <h2 class="page-title">评论(ID: {{ this.commentId }})的审核</h2>
 
     <div v-if="mergedIsLoading" class="loading-state-overlay">
       <div class="loading-spinner"></div>
@@ -16,8 +16,7 @@
             <span><strong>作者:</strong>{{ commentAuthor }} </span>
             <span class="separator">|</span>
             <span><strong>创建时间:</strong>{{ formatDate(createTime)}}</span>
-            <span class="separator">|</span>
-            <span><strong>更新时间:</strong> {{ formatDate(updateTime) }}</span>
+            <span><strong>当前状态:</strong> {{ status === 0 ? '正常' : '封禁' }}</span>
           </div>
         </div>
         <p class="comment-text">{{ commentContent }}</p>
@@ -91,7 +90,7 @@ export default {
           this.commentAuthor = data.author;
           this.createTime = data.create_time;
           this.updateTime = data.update_time;
-          // 获取当前评论状态
+          this.status=data.status;
         } else {
           console.error('获取评论内容失败:', data.message);
         }
@@ -107,25 +106,6 @@ export default {
     async rejectComment() {
       await this.reviewComment(false);
     },
-    async reviewComment(approved) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.post(
-          `http://localhost:5000/manager/comment/${this.commentId}/review`,
-          { approved },
-          {
-            headers: {
-              'Authorization': 'Bearer ' + token
-            }
-          }
-        );
-        alert('审核成功');
-        this.$emit('back-to-list');
-      } catch (error) {
-        console.error('审核评论失败:', error);
-        alert('审核失败，请稍后再试');
-      }
-    },
     async toggleCommentStatus(action) {
       try {
         const token = localStorage.getItem('token');
@@ -140,14 +120,14 @@ export default {
         );
         this.isBlocked = action === 1;
         alert('评论状态更新成功');
-        this.$emit('back-to-list');
+        this.loadCommentContent(); // 调用此方法刷新评论内容
       } catch (error) {
         console.error('更新评论状态失败:', error);
         alert('更新评论状态失败，请稍后再试');
       }
     },
     backToList() {
-      this.$emit('back-to-list');
+       this.$emit('show-comments');
     }
   }
 };

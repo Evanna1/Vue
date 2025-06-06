@@ -2,7 +2,7 @@
   <div class="article-favorites">
     <button @click="backToList" class="back-button">返回</button>
     <div class="header-container">
-      <h3 class="favorites-title">文章 {{ articleId }} 的收藏者</h3>
+      <h3 class="favorites-title">文章(ID:{{ this.articleId }})的收藏用户</h3>
     </div>
     <div class="search-filter-container">
       <div class="search-box">

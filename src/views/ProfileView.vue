@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="logo-wrapper">
-      <router-link to="/" class="logo-absolute">NexTecht</router-link>
+      <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
       <router-link to="/" class="home-btn" title="主页">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -370,7 +370,7 @@
 import { ref, onMounted, watch, reactive } from 'vue'
 import axios, { AxiosError, isAxiosError } from 'axios'
 import { useRouter } from 'vue-router'
-
+import HeaderBar from '@/components/HeaderBar.vue'
 const router = useRouter()
 
 // Interface for a user object in the follow lists, including follow status
@@ -623,12 +623,9 @@ async function fetchProfileAndInitialData(token: string) {
         // alert(`加载关注/粉丝数失败: ${String(followError)}`);
       }
       //喜欢
-      const likeStatsRes = await axios.get(
-        `http://127.0.0.1:5000/user/like_count`,
-        {
-          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
-        },
-      )
+      const likeStatsRes = await axios.get(`http://127.0.0.1:5000/user/like_count`, {
+        headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+      })
       if (likeStatsRes.data && typeof likeStatsRes.data.like_count !== 'undefined') {
         user.value.like_count = likeStatsRes.data.like_count
       } else {
@@ -639,12 +636,9 @@ async function fetchProfileAndInitialData(token: string) {
         user.value.like_count = 0
       }
       //收藏
-      const collectStatsRes = await axios.get(
-        `http://127.0.0.1:5000/user/collect_count`,
-        {
-          headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
-        },
-      )
+      const collectStatsRes = await axios.get(`http://127.0.0.1:5000/user/collect_count`, {
+        headers: { Authorization: `Bearer ${token}` }, // Assuming follow-count might need auth now
+      })
       if (collectStatsRes.data && typeof collectStatsRes.data.collect_count !== 'undefined') {
         user.value.collect_count = collectStatsRes.data.collect_count
       } else {

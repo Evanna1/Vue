@@ -2,7 +2,7 @@
   <div class="article-browsers">
     <button @click="backToList" class="back-button">返回</button>
     <div class="header-container">
-      <h3 class="browsers-title">文章 {{ articleId }} 的浏览者</h3>
+      <h2 class="browsers-title">文章(ID:{{ this.articleId }})的浏览用户</h2>
     </div>
     <div class="search-filter-container">
       <div class="search-box">

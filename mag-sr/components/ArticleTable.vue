@@ -518,7 +518,7 @@ export default {
 }
 
 .submit-button {
-  background-color: #28a745; /* Green submit button */
+  background-color: #5ea8da; /* Green submit button */
   color: white;
   margin-right: 10px;
 }

@@ -115,11 +115,6 @@ export default {
       type: Array,
       required: true
     }
-    // 您之前没有提供 isLoading prop，如果需要加载状态，请自行添加
-    // isLoading: {
-    //   type: Boolean,
-    //   default: false
-    // }
   },
   data() {
     return {
@@ -185,7 +180,6 @@ export default {
           m_password: this.addForm.m_password,
           m_gender: this.addForm.m_gender,
           m_nickname: this.addForm.m_nickname,
-          // m_avatar: this.addForm.m_avatar, // 您的原始代码中m_avatar没有绑定，这里暂时注释掉，如果需要请自行添加
           m_phone: this.addForm.m_phone,
           m_email: this.addForm.m_email
         }, {
@@ -311,11 +305,6 @@ export default {
   width: 100%; /* 占据整行宽度 */
   flex-wrap: wrap; /* 允许换行，适应小屏幕 */
   gap: 16px; /* 元素间的间距 */
-}
-
-.add-button-container {
-  /* 按钮的特定样式，如padding、font-size等已在 .add-button 中定义 */
-  /* 可以添加额外的 margin-right if needed */
 }
 
 .action-button { /* 统一的按钮样式 */
@@ -515,7 +504,7 @@ export default {
 }
 
 .submit-button {
-  background-color: #28a745; /* 绿色提交按钮 */
+  background-color: #5ea8da; /* 绿色提交按钮 */
   color: white;
   margin-right: 10px;
 }

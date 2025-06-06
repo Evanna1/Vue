@@ -2,7 +2,7 @@
   <div class="article-likers">
     <button @click="backToList" class="back-button">返回</button>
     <div class="header-container">
-      <h3 class="likers-title">文章 {{ articleId }} 的点赞用户</h3>
+      <h3 class="likers-title">文章(ID:{{ this.articleId }})的点赞用户</h3>
     </div>
     <div class="search-filter-container">
       <div class="search-box">

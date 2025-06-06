@@ -1,5 +1,5 @@
 <template>
-  <router-link to="/" class="logo-absolute">NexTecht</router-link>
+  <HeaderBar @search="handleSearch" :initialKeyword="keyword" class="fixed-header-bar" />
   <div class="create-post-container">
     <div class="header-bar">
       <h1 class="page-title">博客创作</h1>
@@ -104,7 +104,7 @@ import '@wangeditor/editor/dist/css/style.css'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-
+import HeaderBar from '@/components/HeaderBar.vue'
 const router = useRouter()
 
 const title = ref('')

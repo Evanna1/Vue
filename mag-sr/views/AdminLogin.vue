@@ -56,8 +56,11 @@ export default {
           this.errorMessage = data.message;
         }
       } catch (error) {
-        console.error('请求出错:', error);
-        this.errorMessage = '网络错误，请重试';
+        if (error.response && error.response.data && error.response.data.message) {
+          this.errorMessage = `登录失败: ${error.response.data.message}`;
+        } else {
+          this.errorMessage = '登录失败，请稍后再试';
+        }
       }
     }
   }

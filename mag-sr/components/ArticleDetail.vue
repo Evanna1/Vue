@@ -9,95 +9,95 @@
     <div v-else class="article-content-wrapper">
       <h3 class="article-title">{{ article.title }}</h3>
       <div class="article-meta">
-       <div class="article-meta-inline">
-        <span><strong>作者:</strong> {{ article.author }}</span>
-        <span class="separator">|</span>
-        <span><strong>创建时间:</strong> {{ formatDate(article.create_time) }}</span>
-        <span class="separator">|</span>
-        <span><strong>更新时间:</strong> {{ formatDate(article.update_time) }}</span>
-      </div>
+        <div class="article-meta-inline">
+          <span><strong>作者:</strong> {{ article.author }}</span>
+          <span class="separator">|</span>
+          <span><strong>创建时间:</strong> {{ formatDate(article.create_time) }}</span>
+          <span class="separator">|</span>
+          <span><strong>更新时间:</strong> {{ formatDate(article.update_time) }}</span>
+        </div>
       </div>
       <div class="article-body">
         <h4>文章内容:</h4>
-        <p class="article-text">{{ stripHtmlTags(article.content) }}</p>
+        <div class="article-text" v-html="article.content"></div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from 'axios';
+import axios from 'axios'
 
 export default {
   props: {
     articleId: {
       type: [String, Number],
-      required: true
+      required: true,
     },
     isLoading: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   data() {
     return {
       article: {},
-      localIsLoading: false
-    };
+      localIsLoading: false,
+    }
   },
   computed: {
     mergedIsLoading() {
-      return this.isLoading || this.localIsLoading;
-    }
+      return this.isLoading || this.localIsLoading
+    },
   },
   watch: {
     articleId: {
       immediate: true,
       handler(newVal) {
         if (newVal) {
-          this.fetchArticleDetail();
+          this.fetchArticleDetail()
         }
-      }
-    }
+      },
+    },
   },
   methods: {
     formatDate(dateString) {
-      if (!dateString) return '无';
-      const date = new Date(dateString);
-      return date.toLocaleString();
+      if (!dateString) return '无'
+      const date = new Date(dateString)
+      return date.toLocaleString()
     },
     stripHtmlTags(str) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = str;
-      return tempDiv.textContent || tempDiv.innerText || '';
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = str
+      return tempDiv.textContent || tempDiv.innerText || ''
     },
     async fetchArticleDetail() {
-      this.localIsLoading = true;
+      this.localIsLoading = true
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token')
         const response = await axios.get(
           `http://localhost:5000/manager/article_detail/${this.articleId}`,
           {
             headers: {
-              'Authorization': 'Bearer ' + token
-            }
-          }
-        );
+              Authorization: 'Bearer ' + token,
+            },
+          },
+        )
         if (response.data.state === 1) {
-          this.article = response.data.article;
+          this.article = response.data.article
         }
       } catch (error) {
-        console.error('获取文章详情失败:', error);
-        alert('获取文章详情失败，请稍后再试');
+        console.error('获取文章详情失败:', error)
+        alert('获取文章详情失败，请稍后再试')
       } finally {
-        this.localIsLoading = false;
+        this.localIsLoading = false
       }
     },
     backToList() {
-      this.$emit('back-to-list');
-    }
-  }
-};
+      this.$emit('back-to-list')
+    },
+  },
+}
 </script>
 
 <style scoped>
@@ -144,8 +144,12 @@ h2 {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .article-content-wrapper {
@@ -216,15 +220,12 @@ h2 {
   padding-left: 10px;
 }
 
-.article-text {
-  font-size: 16px;
-  line-height: 1.8;
-  color: #444;
-  white-space: pre-wrap; /* Preserves formatting like line breaks */
-  background-color: #fcfcfc;
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid #eee;
+.article-text >>> blockquote {
+  margin-left: 0;
+  padding-left: 1em;
+  border-left: 4px solid #ccc;
+  color: #555;
+  font-style: italic;
 }
 
 .back-button {

@@ -1,6 +1,6 @@
 <template>
   <div class="logo-wrapper">
-    <router-link to="/" class="logo-absolute">NexTecht</router-link>
+    <HeaderBar @search="handleSearch" :initialKeyword="keyword" />
     <router-link to="/" class="home-btn" title="主页">
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -189,7 +189,7 @@
 import { ref, onMounted, watch } from 'vue'
 import axios, { AxiosError, isAxiosError } from 'axios'
 import { useRouter, useRoute } from 'vue-router'
-
+import HeaderBar from '@/components/HeaderBar.vue'
 const router = useRouter()
 const route = useRoute() // Use useRoute to access route parameters
 

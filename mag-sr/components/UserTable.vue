@@ -19,9 +19,9 @@
             <option value="email">邮箱</option>
             <option value="phone">手机号</option>
             <option value="create_at">注册时间</option>
+            <option value="is_online">登录状态</option>
             <option value="last_login_at">最后登录时间</option>
             <option value="u_status">状态</option>
-            <option value="is_online">登录状态</option>
           </select>
         </div>
       </div>
@@ -40,7 +40,7 @@
             <th>手机号</th>
             <th>注册时间</th>
             <th>最后登录</th>
-            <th>在线</th>
+            <th>登录状态</th>
             <th>状态</th>
             <th>发布权限</th>
             <th>评论权限</th>
@@ -54,12 +54,16 @@
         </thead>
         <tbody>
           <tr v-for="(user, index) in filteredUsers" :key="user.id" :class="{ 'even-row': index % 2 === 1 }">
-            <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
+            <td>
+              <a @click="showUserInfo(user.id)" class="clickable">{{ user.id }}</a>
+            </td>
+            <td>
+              <a @click="showUserInfo(user.id)" class="clickable">{{ user.username }}</a>
+            </td>
             <td>{{ user.nickname }}</td>
             <td>
               <div class="avatar-container">
-                <img :src="user.avatar" alt="头像" class="avatar">
+                <img :src="user.avatar || defaultAvatar" alt="头像" class="avatar" />
               </div>
             </td>
             <td>{{ user.gender }}</td>
@@ -314,8 +318,8 @@ export default {
         }
       }
     },
-    goToUserProfile(userId) {
-      this.$router.push(`/user/${userId}`);
+    showUserInfo(userId) {
+      this.$emit('show-user-info', userId);
     },
     showFollowers(userId) {
       this.$emit('show-followers', userId);
@@ -458,6 +462,8 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+   border: 1px solid #c9c7c7;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .avatar {

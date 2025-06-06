@@ -1,6 +1,6 @@
 <template>
   <div class="user-published-articles">
-    <button @click="backToList" class="back-button">返回</button>
+    <button @click="backToList" class="button">返回</button>
     <div class="header-container">
       <h3 class="page-title">用户 {{ userInfo }}(ID: {{ userId }}) 发布过的文章</h3>
     </div>
@@ -23,8 +23,9 @@
         </select>
       </div>
     </div>
-    <div v-if="mergedIsLoading" class="loading">
-      加载中...
+    <div v-if="mergedIsLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <p>加载中，请稍候...</p>
     </div>
     <div v-else class="articles-content">
       <div class="table-wrapper">
@@ -46,32 +47,35 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="article in filteredArticles" :key="article.id">
+            <tr v-for="(article, index) in filteredArticles" :key="article.id" :class="{ 'even-row': index % 2 === 1 }">
               <td>
-                <a @click="showArticleDetail(article.id)">{{ article.id }}</a>
+                <a @click="showArticleDetail(article.id)" class="clickable">{{ article.id }}</a>
               </td>
               <td>{{ article.title }}</td>
               <td>{{ formatDate(article.create_time) }}</td>
               <td>{{ formatDate(article.update_time) }}</td>
               <td>{{ article.tag }}</td>
-              <td>{{ formatStatus(article.status) }}</td>
-              <td>{{ article.permission === 0 ? '公开' : '屏蔽' }}</td>
               <td>
-                <a @click="showArticleBrowsers(article.id)">{{ article.read_count }}</a>
+                <span :class="['status-badge', formatStatusClass(article.status)]">
+                  {{ formatStatus(article.status) }}
+                </span>
               </td>
               <td>
-                <a @click="showArticleCommentUsers(article.id)">{{ article.comments_count }}</a>
+                <span :class="['status-badge', article.permission === 0 ? 'normal' : 'blocked']">
+                  {{ article.permission === 0 ? '公开' : '屏蔽' }}
+                </span>
               </td>
+              <td @click="showArticleBrowsers(article.id)" class="clickable">{{ article.read_count }}</td>
+              <td @click="showArticleCommentUsers(article.id)" class="clickable">{{ article.comments_count }}</td>
+              <td @click="showArticleLikeUsers(article.id)" class="clickable">{{ article.likes_count }}</td>
+              <td @click="showArticleFavorites(article.id)" class="clickable">{{ article.favorites_count }}</td>
               <td>
-                <a @click="showArticleLikeUsers(article.id)">{{ article.likes_count }}</a>
+                <button class="action-button" @click="showArticleDetail(article.id)">详情</button>
+                <button class="action-button" @click="openPermissionModal(article)">修改权限</button>
               </td>
-              <td>
-                <a @click="showArticleFavorites(article.id)">{{ article.favorites_count }}</a>
-              </td>
-              <td>
-                <button @click="showArticleDetail(article.id)">详情</button>
-                <button @click="openPermissionModal(article)">修改权限</button>
-              </td>
+            </tr>
+            <tr v-if="filteredArticles.length === 0">
+              <td colspan="12" class="no-data">没有符合条件的文章</td>
             </tr>
           </tbody>
         </table>
@@ -169,6 +173,14 @@ export default {
       };
       return statusMap[status] || '未知状态';
     },
+    formatStatusClass(status) {
+      switch (status) {
+        case 0: return 'normal'; // Assuming 'normal' for published
+        case 1: return 'blocked'; // Assuming 'blocked' for deleted
+        case 2: return 'reported'; // Custom class for reported
+        default: return '';
+      }
+    },
     async fetchUserPublishedArticles() {
       this.localIsLoading = true;
       try {
@@ -238,7 +250,7 @@ export default {
           }
         );
         this.currentArticle.permission = parseInt(this.permissionForm.new_permission);
-        this.filterArticles();
+        this.filterArticles(); // Re-filter to update the display if needed
         this.closePermissionModal();
         alert('文章权限更新成功');
       } catch (error) {
@@ -289,8 +301,12 @@ export default {
           case 'update_time':
             value = this.formatDate(article.update_time);
             break;
+          case 'tag': // Added tag filtering
+            value = article.tag;
+            break;
           default:
-            value = article.id.toString() + article.title + this.formatStatus(article.status) + (article.permission === 0 ? '公开' : '屏蔽') + this.formatDate(article.create_time) + this.formatDate(article.update_time);
+            // Search all fields if no specific field is selected
+            value = `${article.id} ${article.title} ${this.formatStatus(article.status)} ${article.permission === 0 ? '公开' : '屏蔽'} ${this.formatDate(article.create_time)} ${this.formatDate(article.update_time)} ${article.tag || ''}`;
         }
         return value.toLowerCase().includes(keyword);
       });
@@ -315,22 +331,23 @@ export default {
   align-items: center;
   margin-bottom: 15px;
   margin-top: 10px;
+  margin-bottom: 20px; /* 增加标题与搜索框的距离 */
 }
 
 .page-title {
-  font-size: 24px;
+  font-size: 20px; /* Adjusted to match article list title */
   font-weight: 600;
   color: #333;
-  margin-bottom: 20px;
+  margin: 0; /* Remove default margin */
 }
 
 .search-filter-container {
   display: flex;
   gap: 2px;
   align-items: center;
-  position: absolute;
-  top: 140px;
-  right: 24px;
+  position: absolute; /* 相对于 .article-browsers 定位 */
+  top: 140px; /* 调整搜索框与白色卡片顶部的距离 (标题高度 + margin-bottom) */
+  right: 24px; /* 靠近白色卡片的右侧 */
 }
 
 .search-box {
@@ -360,7 +377,6 @@ export default {
 .filter-select {
   display: flex;
   align-items: center;
-  margin-left: 10px;
 }
 .filter-select select {
   border: 1px solid #ddd;
@@ -372,7 +388,7 @@ export default {
 }
 
 .articles-content {
-  padding-top: 20px;
+  padding-top: 20px; /* Space for search/filter and title */
 }
 
 .table-wrapper {
@@ -380,7 +396,7 @@ export default {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  margin-top: 30px;
+  margin-top: 50px; /* 缩小搜索框与列表的间距 */
 }
 
 .articles-table {
@@ -408,18 +424,64 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
-.articles-table tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
+.articles-table tbody tr.even-row {
+  background-color: #f9f9f9; /* Matches article list even row background */
 }
 
 .articles-table tbody tr:hover {
-  background-color: #f5f5f5;
+  background-color: #f5f5f5; /* Matches article list hover background */
   transition: background-color 0.2s ease-in-out;
 }
 
-.articles-table td a {
+/* Status Badges - Directly copied from article list */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.normal {
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+.blocked {
+  background-color: #fdecea;
+  color: #d9534f;
+}
+
+.reported {
+  background-color: #fdf5e6;
+  color: #b8860b;
+}
+
+/* Clickable links/cells */
+.clickable {
+  cursor: pointer;
   color: #5ea8da;
-  text-decoration: none;
+}
+
+.clickable:hover {
+  text-decoration: underline;
+}
+
+/* Action Buttons */
+.action-button {
+  background-color: #5ea8da;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease-in-out;
+  margin-right: 8px;
+}
+
+.action-button:hover {
+  background-color: #4a90c2;
 }
 
 .no-data {
@@ -428,34 +490,46 @@ export default {
   color: #999;
 }
 
-.loading {
+/* Loading Overlay - Directly copied from article list */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 200px;
-  font-size: 16px;
+  z-index: 10;
+  border-radius: 12px;
+}
+
+.loading-spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #5ea8da;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
   color: #666;
+  font-size: 16px;
 }
 
-button {
-  background-color: #5ea8da;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
-  margin-right: 5px;
-}
-
-button:hover {
-  background-color: #4a90c2;
-}
-
+/* Modal styles - updated to match article list modal */
 .modal {
   position: fixed;
-  z-index: 1;
+  z-index: 10; /* Higher z-index for modals */
   left: 0;
   top: 0;
   width: 100%;
@@ -467,13 +541,18 @@ button:hover {
 }
 
 .modal-content {
-  background-color: #fefefe;
+  background-color: #fff; /* White background */
   padding: 20px;
-  border: 1px solid #888;
-  width: 400px;
-  max-width: 90%;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 400px;
+  max-width: 90%;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  color: #333;
+  margin-bottom: 15px;
 }
 
 .close {
@@ -496,80 +575,61 @@ button:hover {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
+  color: #555;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
 }
 
 .submit-button,
 .cancel-button {
-  padding: 8px 12px;
+  padding: 10px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
+  transition: opacity 0.2s ease-in-out;
 }
 
 .submit-button {
-  background-color: #5ea8da;
+  background-color: #28a745; /* Green submit button */
   color: white;
   margin-right: 10px;
 }
 
+.submit-button:hover {
+  opacity: 0.9;
+}
+
 .cancel-button {
-  background-color: #f44336;
+  background-color: #dc3545; /* Red cancel button */
   color: white;
 }
 
-.search-filter-container {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  position: absolute;
-  top: 140px;
-  right: 24px;
+.cancel-button:hover {
+  opacity: 0.9;
 }
 
-.search-box {
-  display: flex;
-  align-items: center;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 6px 12px;
-  background-color: #fff;
-}
-
-.search-icon {
-  width: 18px;
-  height: 18px;
-  margin-right: 8px;
-  color: #888;
-}
-
-.search-box input {
+button {
+  background-color: #5ea8da;
+  color: white;
   border: none;
-  outline: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 14px;
-  color: #333;
-  flex-grow: 1;
+  transition: background-color 0.3s ease;
+  margin-top: 1px;
 }
 
-.filter-select {
-  display: flex;
-  align-items: center;
-  margin-left: 10px;
-}
-.filter-select select {
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 5px;
-  font-size: 14px;
-  color: #333;
-  background-color: #fff;
+button:hover {
+  background-color: #4a90c2;
 }
 </style>
